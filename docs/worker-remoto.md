@@ -145,6 +145,43 @@ Após alterar, recriar o container:
 make worker-restart
 ```
 
+## Cenários de tunnel
+
+### Servidor dedicado (recomendado)
+
+Todos os workers tunelam para o servidor dedicado onde a infra roda permanentemente.
+Nenhuma máquina depende da outra — desligar um notebook não afeta os demais workers.
+
+```
+ismael-note ──────┐
+                  ├──── SSH tunnel ──▶ servidor dedicado (PostgreSQL + Redis)
+ismael-X570 ──────┤
+                  │
+outra-maquina ────┘
+```
+
+### Infra rodando em um PC local (ex: ismael-X570)
+
+Se a infra (banco + Redis) estiver rodando localmente em um PC, outros
+workers precisam de SSH access a esse PC para criar o tunnel.
+
+Exemplo — rodar o worker no **ismael-note** conectando ao **ismael-X570**:
+
+```bash
+# No ismael-note, abrir tunnel para o ismael-X570
+ssh -N \
+  -L 5432:localhost:5434 \   # porta local → porta do PG no X570
+  -L 6379:localhost:6380 \   # porta local → porta do Redis no X570
+  ismael@ismael-X570
+```
+
+> As portas do lado direito (5434, 6380) são as portas em que o
+> docker-compose do ismael-X570 expõe PostgreSQL e Redis no host.
+> Ajustar conforme o `.env` da infra principal.
+
+Nesse cenário, se o ismael-X570 for desligado, todos os workers param.
+Por isso o servidor dedicado é a arquitetura mais robusta para produção.
+
 ## Troubleshooting
 
 ### Worker não conecta ao Redis/Postgres
