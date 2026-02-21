@@ -54,6 +54,23 @@ services:
         --audit-log /output/audit.log
         --normal-log /output/postgres.log
 
+  ed-backend-api:
+    build:
+      context: ../ed-backend-api
+      dockerfile: ../ed-infra/backend/Dockerfile
+    container_name: easydoor-backend-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   ed-frontend-app:
     build:
       context: ../ed-frontend-app
