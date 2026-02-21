@@ -61,6 +61,33 @@ Em modo desenvolvimento (fora do Docker), o worker é um processo Python no seu 
 | Quem instalou | `python -m camoufox fetch` no venv local | `python -m camoufox fetch` no Dockerfile |
 | Código do robô | `ed-raspadinha/` no host | copiado para dentro da imagem no build |
 
+## Deploy do worker em máquinas remotas
+
+Para instalar o worker em outras máquinas sem subir toda a infra, use o `docker-compose.worker.yml`. Ele contém apenas o `ed-worker` e se conecta ao Redis e PostgreSQL do servidor principal via **SSH tunnel**.
+
+### 1. Abrir o tunnel no host remoto
+
+```bash
+ssh -N \
+  -L 5432:localhost:5432 \
+  -L 6379:localhost:6379 \
+  usuario@servidor-principal
+```
+
+### 2. Configurar e subir
+
+```bash
+cp .env.worker.example .env.worker
+# editar .env.worker se as portas forem diferentes
+
+docker compose -f docker-compose.worker.yml build
+docker compose -f docker-compose.worker.yml up -d
+```
+
+O `network_mode: host` faz o container enxergar o `localhost` do host — onde o tunnel está escutando. Sem isso, `localhost` dentro do container seria o próprio container, não o host.
+
+---
+
 ## Worker de scraping (ed-worker)
 
 O worker consome CEPs da fila Redis (`easydoor:ceps:fila`), abre instâncias do Firefox via **Camoufox** (Firefox anti-detecção, headless) e persiste anúncios diretamente no PostgreSQL.

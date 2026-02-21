@@ -1,0 +1,27 @@
+# docker-compose para rodar apenas o worker em máquinas remotas.
+#
+# Pré-requisito: SSH tunnel ativo no host apontando para o servidor principal.
+# Exemplo de tunnel:
+#   ssh -N -L 5432:localhost:5432 -L 6379:localhost:6379 usuario@servidor
+#
+# network_mode: host faz o container enxergar o localhost do host,
+# onde o tunnel está escutando.
+#
+# Uso:
+#   cp .env.worker.example .env.worker
+#   docker compose -f docker-compose.worker.yml up -d
+
+services:
+  ed-worker:
+    build:
+      context: ../
+      dockerfile: ed-infra/worker/Dockerfile
+    container_name: easydoor-worker
+    restart: unless-stopped
+    network_mode: host
+    shm_size: 2gb
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    env_file: .env.worker
