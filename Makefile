@@ -25,6 +25,45 @@ psql:
 restart-%:
 	docker compose restart $*
 
+# ─── Worker remoto ───────────────────────────────────────────────────────────
+# Usa docker-compose.worker.yml + .env.worker
+# Ver docs/worker-remoto.md para instruções completas.
+
+WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
+
+worker-build:
+	$(WORKER_COMPOSE) build
+
+worker-up:
+	$(WORKER_COMPOSE) up -d
+	@echo "Worker iniciado. Acompanhe com: make worker-logs"
+
+worker-down:
+	$(WORKER_COMPOSE) down
+
+worker-restart:
+	$(WORKER_COMPOSE) restart ed-worker
+
+worker-logs:
+	$(WORKER_COMPOSE) logs -f ed-worker
+
+worker-test:
+	@if [ -z "$(robo)" ]; then \
+		echo "Uso: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"; \
+		exit 1; \
+	fi
+	docker exec easydoor-worker \
+		env RASPADINHA_HEADLESS=1 \
+		python -m raspadinha \
+		robo=$(robo) \
+		$(if $(logradouro),logradouro="$(logradouro)") \
+		$(if $(bairro),bairro="$(bairro)") \
+		$(if $(localidade),localidade="$(localidade)") \
+		$(if $(uf),uf="$(uf)") \
+		$(if $(cep),cep="$(cep)")
+
+# ─── Destruição total ─────────────────────────────────────────────────────────
+
 nuke:
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
