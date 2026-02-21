@@ -44,6 +44,6 @@ nuke:
 	@echo ""
 	docker compose down
 	rm -rf ./redis_data ./postgres_logs ./audit_logs
-	rm -rf ./data
+	docker run --rm -v "$(PWD)/data:/data" alpine rm -rf /data
 	@echo ""
 	@echo "Tudo destruído. Rode 'make up' para recomeçar do zero."
