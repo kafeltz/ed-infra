@@ -71,6 +71,22 @@ services:
       redis:
         condition: service_healthy
 
+  nginx:
+    image: nginx:alpine
+    container_name: easydoor-nginx
+    restart: unless-stopped
+    ports:
+      - "4174:4174"
+      - "4175:4175"
+      - "4176:4176"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - ed-frontend-app
+      - ed-admin
+      - ed-calibrador
+      - ed-backend-api
+
   ed-frontend-app:
     build:
       context: ../ed-frontend-app
@@ -79,8 +95,6 @@ services:
         PORT: "4175"
     container_name: easydoor-frontend
     restart: unless-stopped
-    ports:
-      - "4175:4175"
     environment:
       PORT: "4175"
 
@@ -92,8 +106,6 @@ services:
         PORT: "4176"
     container_name: easydoor-ed-admin
     restart: unless-stopped
-    ports:
-      - "4176:4176"
     environment:
       PORT: "4176"
 
@@ -105,8 +117,6 @@ services:
         PORT: "4174"
     container_name: easydoor-ed-calibrador
     restart: unless-stopped
-    ports:
-      - "4174:4174"
     environment:
       PORT: "4174"
 

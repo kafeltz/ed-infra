@@ -26,11 +26,12 @@ make restart-db      # Reinicia serviço específico (substitua 'db' pelo nome: 
 | `easydoor-db` | 5432 | PostgreSQL 18 + PostGIS 3 + pgaudit |
 | `easydoor-redis` | 6379 | Redis 7 com persistência |
 | `easydoor-log-sep` | — | Separador de logs: filtra audit (pgaudit) de logs normais |
-| `easydoor-frontend` | 4175 | `ed-frontend-app` (Vite preview) |
-| `easydoor-ed-admin` | 4176 | `ed-admin` (Vite preview) |
-| `easydoor-ed-calibrador` | 4174 | `ed-calibrador` (Vite preview) |
+| `easydoor-nginx` | 4174, 4175, 4176 | NGINX interno: roteia `/api/` → backend, `/` → Vite |
+| `easydoor-frontend` | — (interno) | `ed-frontend-app` (Vite preview) |
+| `easydoor-ed-admin` | — (interno) | `ed-admin` (Vite preview) |
+| `easydoor-ed-calibrador` | — (interno) | `ed-calibrador` (Vite preview) |
 
-Um NGINX externo (fora deste repo) faz proxy reverso para essas portas.
+Um NGINX externo (fora deste repo) faz proxy reverso para as portas 4174/4175/4176, que chegam no `easydoor-nginx`. Ele roteia `/api/*` para o backend e o restante para o Vite preview correspondente.
 
 ### Volumes como bind mounts locais
 
