@@ -1,3 +1,28 @@
+.DEFAULT_GOAL := help
+
+help:
+	@echo ""
+	@echo "Infra EasyDoor"
+	@echo ""
+	@echo "  Infra principal"
+	@echo "    up                 Sobe todos os containers e garante o banco criado"
+	@echo "    down               Para todos os containers"
+	@echo "    build              Reconstrói todas as imagens"
+	@echo "    logs               Acompanha logs em tempo real"
+	@echo "    psql               Abre shell psql no banco"
+	@echo "    restart-<serviço>  Reinicia um serviço (ex: make restart-db)"
+	@echo "    nuke               ⚠  Destrói tudo — containers + dados + logs"
+	@echo ""
+	@echo "  Worker remoto  (docker-compose.worker.yml + .env.worker)"
+	@echo "    worker-build       Builda a imagem do worker (inclui Firefox)"
+	@echo "    worker-up          Sobe o worker"
+	@echo "    worker-down        Para o worker"
+	@echo "    worker-restart     Reinicia o worker sem rebuild"
+	@echo "    worker-logs        Acompanha logs do worker em tempo real"
+	@echo "    worker-test        Testa o Firefox dentro do container"
+	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
+	@echo ""
+
 up:
 	mkdir -p postgres_logs audit_logs data redis_data
 	chmod 777 postgres_logs audit_logs data redis_data
