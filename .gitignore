@@ -1,0 +1,4 @@
+.env
+data/
+postgres_logs/
+audit_logs/

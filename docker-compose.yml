@@ -1,0 +1,98 @@
+services:
+
+  db:
+    build:
+      context: ./postgres
+    container_name: easydoor-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres_logs:/var/log/postgresql
+    command: >
+      postgres
+        -c config_file=/etc/postgresql/postgresql.conf
+        -c hba_file=/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: easydoor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  log_separator:
+    image: python:3.11-slim
+    container_name: easydoor-log-sep
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./postgres_logs:/var/log/postgresql:ro
+      - ./audit_logs:/output
+      - ./postgres/separate_logs_realtime.py:/app/separate_logs.py:ro
+    command: >
+      python /app/separate_logs.py /var/log/postgresql/postgresql.log
+        --audit-log /output/audit.log
+        --normal-log /output/postgres.log
+
+  ed-frontend-app:
+    build:
+      context: ../ed-frontend-app
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4175"
+    container_name: easydoor-frontend
+    restart: unless-stopped
+    ports:
+      - "4175:4175"
+    environment:
+      PORT: "4175"
+
+  admin:
+    build:
+      context: ../admin
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4176"
+    container_name: easydoor-admin
+    restart: unless-stopped
+    ports:
+      - "4176:4176"
+    environment:
+      PORT: "4176"
+
+  calibrador:
+    build:
+      context: ../calibrador
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4174"
+    container_name: easydoor-calibrador
+    restart: unless-stopped
+    ports:
+      - "4174:4174"
+    environment:
+      PORT: "4174"
+
+volumes:
+  pgdata:
+  redisdata:
