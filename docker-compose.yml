@@ -71,6 +71,28 @@ services:
       redis:
         condition: service_healthy
 
+  ed-worker:
+    build:
+      context: ../
+      dockerfile: ed-infra/worker/Dockerfile
+    container_name: easydoor-worker
+    restart: unless-stopped
+    shm_size: 2gb
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
+      REDIS_URL: redis://redis:6379/0
+      WORKER_MAX_TOTAL: "3"
+      WORKER_HEADLESS: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     container_name: easydoor-nginx

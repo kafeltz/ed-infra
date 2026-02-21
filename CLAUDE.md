@@ -26,6 +26,7 @@ make restart-db      # Reinicia serviço específico (substitua 'db' pelo nome: 
 | `easydoor-db` | 5432 | PostgreSQL 18 + PostGIS 3 + pgaudit |
 | `easydoor-redis` | 6379 | Redis 7 com persistência |
 | `easydoor-log-sep` | — | Separador de logs: filtra audit (pgaudit) de logs normais |
+| `easydoor-worker` | — | Worker de scraping: consome fila Redis, abre Firefox(es), grava no Postgres |
 | `easydoor-nginx` | 4174, 4175, 4176 | NGINX interno: roteia `/api/` → backend, `/` → Vite |
 | `easydoor-frontend` | — (interno) | `ed-frontend-app` (Vite preview) |
 | `easydoor-ed-admin` | — (interno) | `ed-admin` (Vite preview) |

@@ -9,11 +9,41 @@ Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + Redis + 3 
 | `db` | PG 18 + PostGIS 3 + pgaudit | 5432 |
 | `redis` | redis:7-alpine | 6379 |
 | `log_separator` | python:3.11-slim | — |
-| `ed-frontend-app` | node:20-alpine (Vite preview) | 4175 |
-| `admin` | node:20-alpine (Vite preview) | 4176 |
-| `calibrador` | node:20-alpine (Vite preview) | 4174 |
+| `ed-worker` | python:3.11-slim + Firefox | — |
+| `nginx` | nginx:alpine | 4174, 4175, 4176 |
+| `ed-frontend-app` | node:20-alpine (Vite preview) | — (interno) |
+| `ed-admin` | node:20-alpine (Vite preview) | — (interno) |
+| `ed-calibrador` | node:20-alpine (Vite preview) | — (interno) |
+| `ed-backend-api` | python (FastAPI) | 8000 |
 
-O NGINX externo faz proxy reverso para essas portas.
+O NGINX interno roteia `/api/` → backend e `/` → Vite preview. Um NGINX externo faz SSL e proxy para as portas acima.
+
+## Worker de scraping (ed-worker)
+
+O worker consome CEPs da fila Redis (`easydoor:ceps:fila`), abre instâncias do Firefox via **Camoufox** (Firefox anti-detecção, headless) e persiste anúncios diretamente no PostgreSQL.
+
+### Paralelismo
+
+O número de Firefoxs simultâneos é controlado por `WORKER_MAX_TOTAL` no `docker-compose.yml`:
+
+```yaml
+environment:
+  WORKER_MAX_TOTAL: "3"   # até 3 CEPs/browsers em paralelo no mesmo container
+```
+
+Não é necessário rodar múltiplos containers — só aumentar esse número.
+
+### Requisitos especiais do Firefox em Docker
+
+O Firefox requer configurações específicas no container para funcionar estável:
+
+| Configuração | Motivo |
+|---|---|
+| `shm_size: 2gb` | O `/dev/shm` padrão do Docker (64MB) é insuficiente para o Firefox e causa crashes |
+| `security_opt: seccomp:unconfined` | O sandbox do Firefox usa syscalls bloqueadas pelo perfil seccomp padrão do Docker |
+| `cap_add: SYS_ADMIN` | Necessário para o namespace de processos do sandbox do Firefox |
+
+Sem essas três configurações o Firefox trava ou não abre.
 
 ## Primeiros passos (novo programador)
 
