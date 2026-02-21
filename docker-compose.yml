@@ -6,7 +6,7 @@ services:
     container_name: easydoor-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5434:5432"
     env_file: .env
     volumes:
       - ./data:/var/lib/postgresql
@@ -28,7 +28,7 @@ services:
     container_name: easydoor-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - ./redis_data:/data
     command: redis-server --save 60 1 --loglevel warning
