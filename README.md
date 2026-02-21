@@ -15,36 +15,95 @@ Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + Redis + 3 
 
 O NGINX externo faz proxy reverso para essas portas.
 
-## Início rápido
+## Primeiros passos (novo programador)
+
+### Pré-requisitos
+
+- Docker e Docker Compose instalados
+- `psql` (cliente PostgreSQL) instalado localmente
+- Repositórios irmãos clonados na **mesma pasta pai**:
+
+```
+easydoor/
+├── ed-infra/        ← este repo
+├── ed-engine/       ← schema e lógica SQL
+├── ed-backend-api/  ← API backend
+├── ed-frontend-app/ ← frontend principal
+├── ed-admin/        ← painel admin
+└── ed-calibrador/   ← ferramenta de calibração
+```
+
+### 1. Configurar variáveis de ambiente
 
 ```bash
 cp .env.example .env
-# edite .env com as credenciais reais
+# Para desenvolvimento local, os valores do .env.example já funcionam.
+```
+
+### 2. Subir a infraestrutura
+
+```bash
 make up
 ```
 
-## Comandos
+Isso cria os diretórios de dados, sobe todos os containers e garante que o banco `easydoor` existe.
+
+### 3. Aplicar o schema do banco
+
+O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-engine`:
 
 ```bash
-make up            # Sobe todos os containers
+cd ../ed-engine
+make schema   # cria toda a estrutura
+make seed     # popula dados iniciais (mat_ajustes + anúncios)
+```
+
+Ambos os comandos são idempotentes e podem ser reexecutados a qualquer momento sem perder dados.
+
+### 4. Verificar que tudo está funcionando
+
+```bash
+# Containers saudáveis
+docker compose ps
+
+# Banco com schema aplicado
+psql -h localhost -U easydoor -d easydoor -c "\dt"
+
+# PostGIS ativo
+psql -h localhost -U easydoor -d easydoor -c "SELECT PostGIS_version();"
+
+# Redis
+redis-cli ping
+
+# Frontends (se buildados)
+curl -s http://localhost:4175 | head -5   # ed-frontend-app
+curl -s http://localhost:4176 | head -5   # ed-admin
+curl -s http://localhost:4174 | head -5   # ed-calibrador
+```
+
+---
+
+## Comandos do dia a dia
+
+```bash
+make up            # Sobe todos os containers (seguro rodar mais de uma vez)
 make down          # Para todos os containers
-make build         # Reconstrói imagens
+make build         # Reconstrói as imagens Docker
 make logs          # Acompanha logs em tempo real
 make psql          # Abre shell psql no banco
-make restart-db    # Reinicia serviço específico (ex: db, redis, admin...)
+make restart-db    # Reinicia serviço específico (ex: db, redis, ed-admin...)
+make nuke          # ⚠ DESTRÓI TUDO — containers + dados + logs (pede confirmação)
 ```
 
-## Schema do banco (tabelas)
+### Recomeçar do zero
 
-**O container sobe sem tabelas.** O PostgreSQL Docker só executa scripts de inicialização presentes em `/docker-entrypoint-initdb.d/` — e nenhum script está montado lá.
-
-O schema (tabelas, indexes, triggers, functions SQL) é gerenciado pelo repositório `ed-engine` e aplicado separadamente:
+Se precisar apagar tudo e reinicializar (ex: banco corrompido, testar migração):
 
 ```bash
-cd ~/ed-engine && make schema
+make nuke     # destrói tudo (pede confirmação digitando DESTRUIR)
+make up       # recria infra limpa
+cd ../ed-engine && make schema && make seed
 ```
-
-Esse comando é idempotente (`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`) e pode ser executado a qualquer momento sem perder dados.
 
 ## Migração PG 16 nativo → PG 18 Docker
 
