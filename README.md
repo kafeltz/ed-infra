@@ -18,6 +18,49 @@ Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + Redis + 3 
 
 O NGINX interno roteia `/api/` → backend e `/` → Vite preview. Um NGINX externo faz SSL e proxy para as portas acima.
 
+## Arquitetura
+
+```
+                        ┌─────────────────────────────────────────────┐
+                        │              docker-compose                  │
+                        │                                              │
+  NGINX externo (SSL)   │  ┌──────────┐   ┌──────────────────────┐   │
+  stageadmin  ──────────┼─▶│  nginx   │──▶│  ed-admin  (Vite)    │   │
+  stagefront  ──────────┼─▶│ (interno)│──▶│  ed-frontend (Vite)  │   │
+  stagecalib  ──────────┼─▶│          │──▶│  ed-calibrador (Vite)│   │
+                        │  │          │   └──────────────────────┘   │
+                        │  │  /api/   │   ┌──────────────────────┐   │
+                        │  │ ─────────┼──▶│  ed-backend-api      │   │
+                        │  └──────────┘   └──────────┬───────────┘   │
+                        │                            │               │
+                        │  ┌─────────────────────┐  │               │
+                        │  │     ed-worker        │  │               │
+                        │  │                      │  ▼               │
+                        │  │  worker.py           │  ┌────────────┐  │
+                        │  │    │                 │  │ PostgreSQL │  │
+                        │  │    ▼                 ├─▶│  (easydoor │  │
+                        │  │  Camoufox()          │  │   -db)     │  │
+                        │  │    │                 │  └────────────┘  │
+                        │  │    ▼                 │  ┌────────────┐  │
+                        │  │  🦊 Firefox          ├─▶│   Redis    │  │
+                        │  │  (baked na imagem)   │  │ (easydoor  │  │
+                        │  │                      │  │   -redis)  │  │
+                        │  └─────────────────────┘  └────────────┘  │
+                        └─────────────────────────────────────────────┘
+```
+
+### Worker e o Firefox
+
+O `ed-worker` e o Firefox **não são containers separados** — o Firefox roda como processo filho dentro do próprio container do worker.
+
+Em modo desenvolvimento (fora do Docker), o worker é um processo Python no seu PC e o Firefox abre localmente via `ed-raspadinha/venv/`. Dentro do Docker, é exatamente o mesmo modelo: o worker é um processo Python dentro do container `easydoor-worker`, e o Firefox abre dentro desse mesmo container — instalado na imagem durante o `docker build` via `python -m camoufox fetch`.
+
+| | Desenvolvimento | Docker |
+|---|---|---|
+| Firefox instalado em | `ed-raspadinha/venv/` (via `make install`) | imagem `easydoor-worker` (via `docker build`) |
+| Quem instalou | `python -m camoufox fetch` no venv local | `python -m camoufox fetch` no Dockerfile |
+| Código do robô | `ed-raspadinha/` no host | copiado para dentro da imagem no build |
+
 ## Worker de scraping (ed-worker)
 
 O worker consome CEPs da fila Redis (`easydoor:ceps:fila`), abre instâncias do Firefox via **Camoufox** (Firefox anti-detecção, headless) e persiste anúncios diretamente no PostgreSQL.
