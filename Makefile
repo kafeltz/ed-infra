@@ -1,4 +1,6 @@
 up:
+	mkdir -p postgres_logs audit_logs data redis_data
+	chmod 777 postgres_logs audit_logs data redis_data
 	docker compose up -d
 
 down:

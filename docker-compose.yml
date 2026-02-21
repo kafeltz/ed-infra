@@ -9,7 +9,7 @@ services:
       - "5432:5432"
     env_file: .env
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./data:/var/lib/postgresql
       - ./postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - ./postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
       - ./postgres_logs:/var/log/postgresql
@@ -30,7 +30,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redisdata:/data
+      - ./redis_data:/data
     command: redis-server --save 60 1 --loglevel warning
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -67,32 +67,29 @@ services:
     environment:
       PORT: "4175"
 
-  admin:
+  ed-admin:
     build:
-      context: ../admin
+      context: ../ed-admin
       dockerfile: ../ed-infra/frontend/Dockerfile
       args:
         PORT: "4176"
-    container_name: easydoor-admin
+    container_name: easydoor-ed-admin
     restart: unless-stopped
     ports:
       - "4176:4176"
     environment:
       PORT: "4176"
 
-  calibrador:
+  ed-calibrador:
     build:
-      context: ../calibrador
+      context: ../ed-calibrador
       dockerfile: ../ed-infra/frontend/Dockerfile
       args:
         PORT: "4174"
-    container_name: easydoor-calibrador
+    container_name: easydoor-ed-calibrador
     restart: unless-stopped
     ports:
       - "4174:4174"
     environment:
       PORT: "4174"
 
-volumes:
-  pgdata:
-  redisdata:
