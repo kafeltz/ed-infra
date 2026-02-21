@@ -2,8 +2,8 @@ up:
 	mkdir -p postgres_logs audit_logs data redis_data
 	chmod 777 postgres_logs audit_logs data redis_data
 	docker compose up -d
-	@echo "Aguardando PostgreSQL ficar saudável..."
-	@until docker inspect --format='{{.State.Health.Status}}' easydoor-db 2>/dev/null | grep -q healthy; do sleep 1; done
+	@echo "Aguardando PostgreSQL aceitar conexões TCP..."
+	@until PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d postgres -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
 	@PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d postgres -tc \
 		"SELECT 1 FROM pg_database WHERE datname='easydoor'" | grep -q 1 || \
 		PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d postgres \
