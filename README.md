@@ -1,52 +1,50 @@
 # ed-infra
 
-Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + Redis + 3 frontends.
+Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + API backend + worker + 3 frontends.
 
 ## Serviços
 
 | Serviço | Imagem | Porta |
 |---|---|---|
-| `db` | PG 18 + PostGIS 3 + pgaudit | 5432 |
-| `redis` | redis:7-alpine | 6379 |
-| `log_separator` | python:3.11-slim | — |
+| `db` | PG 18 + PostGIS 3 + pgaudit | 5434 (host) / 5432 |
+| `ed-backend-api` | python (FastAPI) | 8000 |
 | `ed-worker` | python:3.11-slim + Firefox | — |
+| `log_separator` | python:3.11-slim | — |
 | `nginx` | nginx:alpine | 4174, 4175, 4176 |
 | `ed-frontend-app` | node:20-alpine (Vite preview) | — (interno) |
 | `ed-admin` | node:20-alpine (Vite preview) | — (interno) |
 | `ed-calibrador` | node:20-alpine (Vite preview) | — (interno) |
-| `ed-backend-api` | python (FastAPI) | 8000 |
 
 O NGINX interno roteia `/api/` → backend e `/` → Vite preview. Um NGINX externo faz SSL e proxy para as portas acima.
 
 ## Arquitetura
 
 ```
-                        ┌─────────────────────────────────────────────┐
-                        │              docker-compose                  │
-                        │                                              │
-  NGINX externo (SSL)   │  ┌──────────┐   ┌──────────────────────┐   │
-  stageadmin  ──────────┼─▶│  nginx   │──▶│  ed-admin  (Vite)    │   │
-  stagefront  ──────────┼─▶│ (interno)│──▶│  ed-frontend (Vite)  │   │
-  stagecalib  ──────────┼─▶│          │──▶│  ed-calibrador (Vite)│   │
-                        │  │          │   └──────────────────────┘   │
-                        │  │  /api/   │   ┌──────────────────────┐   │
-                        │  │ ─────────┼──▶│  ed-backend-api      │   │
-                        │  └──────────┘   └──────────┬───────────┘   │
-                        │                            │               │
-                        │  ┌─────────────────────┐  │               │
-                        │  │     ed-worker        │  │               │
-                        │  │                      │  ▼               │
-                        │  │  worker.py           │  ┌────────────┐  │
-                        │  │    │                 │  │ PostgreSQL │  │
-                        │  │    ▼                 ├─▶│  (easydoor │  │
-                        │  │  Camoufox()          │  │   -db)     │  │
-                        │  │    │                 │  └────────────┘  │
-                        │  │    ▼                 │  ┌────────────┐  │
-                        │  │  🦊 Firefox          ├─▶│   Redis    │  │
-                        │  │  (baked na imagem)   │  │ (easydoor  │  │
-                        │  │                      │  │   -redis)  │  │
-                        │  └─────────────────────┘  └────────────┘  │
-                        └─────────────────────────────────────────────┘
+                        ┌──────────────────────────────────────────────┐
+                        │              docker-compose                   │
+                        │                                               │
+  NGINX externo (SSL)   │  ┌──────────┐   ┌───────────────────────┐   │
+  stageadmin  ──────────┼─▶│  nginx   │──▶│  ed-admin  (Vite)     │   │
+  stagefront  ──────────┼─▶│ (interno)│──▶│  ed-frontend (Vite)   │   │
+  stagecalib  ──────────┼─▶│          │──▶│  ed-calibrador (Vite) │   │
+                        │  │          │   └───────────────────────┘   │
+                        │  │  /api/   │   ┌───────────────────────┐   │
+                        │  │ ─────────┼──▶│  ed-backend-api       │   │
+                        │  └──────────┘   └───────────┬───────────┘   │
+                        │                      ▲      │               │
+                        │                      │      ▼               │
+                        │  ┌───────────────┐   │  ┌────────────┐      │
+                        │  │  ed-worker    │   │  │ PostgreSQL │      │
+                        │  │               │   │  │ (easydoor  │      │
+                        │  │  worker.py    ├───┘  │  -db)      │      │
+                        │  │    │          │      └────────────┘      │
+                        │  │    ▼          │  polling HTTP na API     │
+                        │  │  Camoufox()   │  (GET /worker/proximo-  │
+                        │  │    │          │   cep, POST /worker/    │
+                        │  │    ▼          │   anuncios, etc.)       │
+                        │  │  Firefox      │                          │
+                        │  └───────────────┘                          │
+                        └──────────────────────────────────────────────┘
 ```
 
 ### Worker e o Firefox
@@ -63,34 +61,67 @@ Em modo desenvolvimento (fora do Docker), o worker é um processo Python no seu 
 
 ## Deploy do worker em máquinas remotas
 
-Para instalar o worker em outras máquinas sem subir toda a infra, use o `docker-compose.worker.yml`. Ele contém apenas o `ed-worker` e se conecta ao Redis e PostgreSQL do servidor principal via **SSH tunnel**.
+Para rodar o worker em outras máquinas sem subir toda a infra, use o `docker-compose.worker.yml`. Ele contém apenas o `ed-worker` e se comunica exclusivamente via HTTP com a API — não requer SSH tunnel, acesso direto ao banco ou qualquer outro serviço.
 
-### 1. Abrir o tunnel no host remoto
+### Pré-requisitos
+
+O build precisa de três repositórios na mesma pasta pai:
 
 ```bash
-ssh -N \
-  -L 5432:localhost:5432 \
-  -L 6379:localhost:6379 \
-  usuario@servidor-principal
+mkdir ~/projects/easydoor && cd ~/projects/easydoor
+git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
+git clone git@git.easydoor.ai:EasyDoor/ed-worker.git
+git clone git@git.easydoor.ai:EasyDoor/ed-raspadinha.git
 ```
 
-### 2. Configurar e subir
+### Configurar e subir
 
 ```bash
+cd ed-infra
 cp .env.worker.example .env.worker
-# editar .env.worker se as portas forem diferentes
+# editar .env.worker com a URL da API e a chave
 
-docker compose -f docker-compose.worker.yml build
-docker compose -f docker-compose.worker.yml up -d
+make worker-build
+make worker-up
+make worker-logs
 ```
 
-O `network_mode: host` faz o container enxergar o `localhost` do host — onde o tunnel está escutando. Sem isso, `localhost` dentro do container seria o próprio container, não o host.
+### Cenário 1 — Worker aponta para o PC local (rede local)
+
+Descubra o IP do PC na rede local:
+
+```bash
+# rodar no PC onde a API está rodando
+hostname -I | awk '{print $1}'
+```
+
+`.env.worker`:
+```env
+API_URL=http://<IP-DO-PC>:8000
+WORKER_API_KEY=changeme
+WORKER_MAX_TOTAL=2
+WORKER_HEADLESS=1
+```
+
+### Cenário 2 — Worker aponta para servidor externo
+
+`.env.worker`:
+```env
+API_URL=http://worker.kafeltz.com.br
+WORKER_API_KEY=<chave-segura>
+WORKER_MAX_TOTAL=2
+WORKER_HEADLESS=1
+```
+
+Pré-requisitos no servidor externo:
+- API (`ed-backend-api`) rodando e acessível na porta configurada
+- Mesma `WORKER_API_KEY` configurada no servidor
 
 ---
 
 ## Worker de scraping (ed-worker)
 
-O worker consome CEPs da fila Redis (`easydoor:ceps:fila`), abre instâncias do Firefox via **Camoufox** (Firefox anti-detecção, headless) e persiste anúncios diretamente no PostgreSQL.
+O worker faz polling HTTP na API (`GET /api/v1/worker/proximo-cep`), abre instâncias do Firefox via **Camoufox** (Firefox anti-detecção, headless) e persiste anúncios via API HTTP.
 
 ### Paralelismo
 
@@ -172,8 +203,8 @@ psql -h localhost -U easydoor -d easydoor -c "\dt"
 # PostGIS ativo
 psql -h localhost -U easydoor -d easydoor -c "SELECT PostGIS_version();"
 
-# Redis
-redis-cli ping
+# API respondendo
+curl -s http://localhost:8000/health
 
 # Frontends (se buildados)
 curl -s http://localhost:4175 | head -5   # ed-frontend-app
@@ -191,7 +222,7 @@ make down          # Para todos os containers
 make build         # Reconstrói as imagens Docker
 make logs          # Acompanha logs em tempo real
 make psql          # Abre shell psql no banco
-make restart-db    # Reinicia serviço específico (ex: db, redis, ed-admin...)
+make restart-db    # Reinicia serviço específico (ex: db, ed-admin, ed-worker...)
 make nuke          # ⚠ DESTRÓI TUDO — containers + dados + logs (pede confirmação)
 
 # Rebuildar e reiniciar um serviço específico (ex: após atualizar o código do ed-admin)
@@ -239,7 +270,7 @@ psql -h localhost -U easydoor -d easydoor -c "SELECT PostGIS_version();"
 curl -s http://localhost:4175 | head -5
 curl -s http://localhost:4176 | head -5
 curl -s http://localhost:4174 | head -5
-redis-cli ping
+curl -s http://localhost:8000/health     # API backend
 cd ~/ed-engine && make test-quick
 ```
 
@@ -247,8 +278,10 @@ cd ~/ed-engine && make test-quick
 
 ```
 ed-infra/
-├── docker-compose.yml
-├── .env.example
+├── docker-compose.yml              # Stack completa (dev local)
+├── docker-compose.worker.yml       # Apenas worker (deploy remoto)
+├── .env.example                    # Variáveis da stack principal
+├── .env.worker.example             # Variáveis do worker remoto
 ├── Makefile
 ├── postgres/
 │   ├── Dockerfile                  # PG 18 + PostGIS + pgaudit (via pgdg APT)
@@ -256,8 +289,14 @@ ed-infra/
 │   │   ├── postgresql.conf
 │   │   └── pg_hba.conf
 │   └── separate_logs_realtime.py   # Separador de logs de auditoria
-└── frontend/
-    └── Dockerfile                  # Vite build + preview genérico (node 20)
+├── backend/
+│   └── Dockerfile                  # FastAPI (ed-backend-api)
+├── worker/
+│   └── Dockerfile                  # Worker + Firefox (ed-worker + ed-raspadinha)
+├── frontend/
+│   └── Dockerfile                  # Vite build + preview genérico (node 20)
+└── nginx/
+    └── nginx.conf                  # Roteia /api/ → backend, / → Vite
 ```
 
 Os frontends (`ed-frontend-app`, `admin`, `calibrador`) são buildados a partir dos seus próprios repositórios usando o `frontend/Dockerfile` genérico deste repo.
