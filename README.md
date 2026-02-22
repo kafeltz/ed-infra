@@ -193,6 +193,9 @@ make logs          # Acompanha logs em tempo real
 make psql          # Abre shell psql no banco
 make restart-db    # Reinicia serviço específico (ex: db, redis, ed-admin...)
 make nuke          # ⚠ DESTRÓI TUDO — containers + dados + logs (pede confirmação)
+
+# Rebuildar e reiniciar um serviço específico (ex: após atualizar o código do ed-admin)
+docker compose build ed-admin && docker compose up -d ed-admin
 ```
 
 ### Recomeçar do zero
