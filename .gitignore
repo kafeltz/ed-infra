@@ -1,4 +1,6 @@
 .env
+.env.worker
 data/
 postgres_logs/
 audit_logs/
+redis_data/
