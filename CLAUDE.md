@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão geral
 
-Repositório de infraestrutura Docker da EasyDoor. Orquestra os serviços base (banco de dados, cache, frontends) via `docker compose`. O schema do banco **não** é gerenciado aqui — fica no repositório `ed-engine`.
+Repositório de infraestrutura Docker da EasyDoor. Orquestra os serviços base (banco de dados, frontends, worker) via `docker compose`. O schema do banco **não** é gerenciado aqui — fica no repositório `ed-engine`.
 
 ## Comandos principais
 
@@ -14,7 +14,7 @@ make down            # Para e remove todos os containers
 make build           # Reconstrói as imagens Docker
 make logs            # Acompanha logs em tempo real (todos os serviços)
 make psql            # Abre shell psql (requer PostgreSQL client local)
-make restart-db      # Reinicia serviço específico (substitua 'db' pelo nome: redis, ed-frontend-app, etc.)
+make restart-db      # Reinicia serviço específico (substitua 'db' pelo nome: ed-backend-api, ed-worker, etc.)
 ```
 
 ## Arquitetura
@@ -23,10 +23,10 @@ make restart-db      # Reinicia serviço específico (substitua 'db' pelo nome: 
 
 | Container | Porta | Descrição |
 |---|---|---|
-| `easydoor-db` | 5432 | PostgreSQL 18 + PostGIS 3 + pgaudit |
-| `easydoor-redis` | 6379 | Redis 7 com persistência |
+| `easydoor-db` | 5434 (host) / 5432 | PostgreSQL 18 + PostGIS 3 + pgaudit |
+| `easydoor-backend-api` | 8000 | API FastAPI — única a acessar o banco diretamente |
+| `easydoor-worker` | — | Worker de scraping: polling HTTP na API, abre Firefox(es) |
 | `easydoor-log-sep` | — | Separador de logs: filtra audit (pgaudit) de logs normais |
-| `easydoor-worker` | — | Worker de scraping: consome fila Redis, abre Firefox(es), grava no Postgres |
 | `easydoor-nginx` | 4174, 4175, 4176 | NGINX interno: roteia `/api/` → backend, `/` → Vite |
 | `easydoor-frontend` | — (interno) | `ed-frontend-app` (Vite preview) |
 | `easydoor-ed-admin` | — (interno) | `ed-admin` (Vite preview) |
@@ -39,7 +39,6 @@ Um NGINX externo (fora deste repo) faz proxy reverso para as portas 4174/4175/41
 - `./data` — dados do PostgreSQL (`/var/lib/postgresql`)
 - `./postgres_logs` — logs brutos do PostgreSQL
 - `./audit_logs` — logs de auditoria separados pelo `log_separator`
-- `./redis_data` — dados de persistência do Redis
 
 Esses diretórios são criados pelo `make up` e estão no `.gitignore`.
 
@@ -70,7 +69,15 @@ Copiar `.env.example` para `.env` antes de subir:
 cp .env.example .env
 ```
 
-Variáveis: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
+Variáveis: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `WORKER_API_KEY`.
+
+Para o worker remoto, copiar `.env.worker.example` para `.env.worker`:
+
+```bash
+cp .env.worker.example .env.worker
+```
+
+Variáveis: `API_URL`, `WORKER_API_KEY`, `WORKER_MAX_TOTAL`, `WORKER_HEADLESS`.
 
 ## Schema do banco
 
