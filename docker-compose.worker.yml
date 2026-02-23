@@ -21,3 +21,5 @@ services:
     cap_add:
       - SYS_ADMIN
     env_file: .env.worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
