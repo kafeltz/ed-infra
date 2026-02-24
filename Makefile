@@ -42,9 +42,11 @@ down:
 	docker compose down
 
 build:
+	cp -f .dockerignore ../
 	docker compose build
 
 rebuild:
+	cp -f .dockerignore ../
 	docker compose build
 	docker compose up -d --force-recreate
 
@@ -64,9 +66,11 @@ restart-%:
 WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
 
 worker-build:
+	cp -f .dockerignore ../
 	$(WORKER_COMPOSE) build
 
 worker-rebuild:
+	cp -f .dockerignore ../
 	$(WORKER_COMPOSE) build
 	$(WORKER_COMPOSE) up -d --force-recreate
 

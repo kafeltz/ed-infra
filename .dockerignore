@@ -1,0 +1,26 @@
+# Projetos não usados no build do worker/backend
+ask-the-intent/
+prototipo/
+tools/
+webook-gitea/
+
+# Diretórios pesados que nunca devem ir pro build context
+**/.git
+**/.venv
+**/venv
+**/node_modules
+**/__pycache__
+**/*.egg-info
+**/dist
+**/build
+
+# Dados e logs do ed-infra
+ed-infra/data/
+ed-infra/postgres_logs/
+ed-infra/audit_logs/
+
+# Arquivos de ambiente (segurança)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example

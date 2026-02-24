@@ -28,19 +28,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Instalar ed-raspadinha (repo irmão copiado junto pelo build context)
-COPY ed-raspadinha/ /ed-raspadinha/
+# ── Camada 1: dependências Python (muda raramente) ──────────────
+# Copiar apenas os metadados de dependências, não o código-fonte.
+# Assim o pip install + camoufox fetch ficam em cache enquanto as
+# dependências não mudarem.
+
+COPY ed-raspadinha/pyproject.toml /ed-raspadinha/pyproject.toml
+COPY ed-raspadinha/raspadinha/__init__.py /ed-raspadinha/raspadinha/__init__.py
 RUN pip install --no-cache-dir /ed-raspadinha/
 
-# Instalar dependências do worker (sem o -e ../ed-raspadinha, já instalado acima)
 COPY ed-worker/requirements.txt .
 RUN grep -v 'ed-raspadinha' requirements.txt > /tmp/reqs.txt && \
     pip install --no-cache-dir -r /tmp/reqs.txt
 
-# Baixar o binário do Firefox do Camoufox (baked na imagem)
+# ── Camada 2: binário do Firefox (~500 MB, muda quase nunca) ────
 RUN python -m camoufox fetch
 
-# Código do worker
+# ── Camada 3: código-fonte (muda frequentemente) ────────────────
+# Invalidar aqui NÃO rebaixa as camadas acima.
+COPY ed-raspadinha/ /ed-raspadinha/
+RUN pip install --no-cache-dir --no-deps /ed-raspadinha/
+
 COPY ed-worker/ .
 
 ENV WORKER_HEADLESS=1
