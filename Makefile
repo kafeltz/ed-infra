@@ -8,6 +8,7 @@ help:
 	@echo "    up                 Sobe todos os containers e garante o banco criado"
 	@echo "    down               Para todos os containers"
 	@echo "    build              Reconstrói todas as imagens"
+	@echo "    rebuild            Reconstrói imagens e recria containers"
 	@echo "    logs               Acompanha logs em tempo real"
 	@echo "    psql               Abre shell psql no banco"
 	@echo "    restart-<serviço>  Reinicia um serviço (ex: make restart-db)"
@@ -15,6 +16,7 @@ help:
 	@echo ""
 	@echo "  Worker remoto  (docker-compose.worker.yml + .env.worker)"
 	@echo "    worker-build       Builda a imagem do worker (inclui Firefox)"
+	@echo "    worker-rebuild     Builda e recria o container do worker"
 	@echo "    worker-up          Sobe o worker"
 	@echo "    worker-down        Para o worker"
 	@echo "    worker-restart     Reinicia o worker sem rebuild"
@@ -42,6 +44,10 @@ down:
 build:
 	docker compose build
 
+rebuild:
+	docker compose build
+	docker compose up -d --force-recreate
+
 logs:
 	docker compose logs -f
 
@@ -59,6 +65,10 @@ WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
 
 worker-build:
 	$(WORKER_COMPOSE) build
+
+worker-rebuild:
+	$(WORKER_COMPOSE) build
+	$(WORKER_COMPOSE) up -d --force-recreate
 
 worker-up:
 	$(WORKER_COMPOSE) up -d
