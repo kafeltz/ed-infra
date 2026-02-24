@@ -73,6 +73,7 @@ services:
       - SYS_ADMIN
     environment:
       API_URL: http://ed-backend-api:8000
+      API_TOKEN: ${API_TOKEN:-}
       WORKER_API_KEY: ${WORKER_API_KEY}
       WORKER_MAX_TOTAL: "3"
       WORKER_HEADLESS: "1"
