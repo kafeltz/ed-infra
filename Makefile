@@ -26,6 +26,7 @@ help:
 up:
 	mkdir -p postgres_logs audit_logs data
 	chmod 777 postgres_logs audit_logs data
+	docker network prune -f
 	docker compose up -d --remove-orphans --force-recreate
 	@echo "Aguardando PostgreSQL aceitar conexões TCP..."
 	@until PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
