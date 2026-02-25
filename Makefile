@@ -29,6 +29,11 @@ help:
 	@echo "    worker-test        Testa o Firefox dentro do container"
 	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
 	@echo ""
+	@echo "  Deploy no notebook  (ssh ismael-note)"
+	@echo "    notebook-deploy    Atualiza código e rebuild do worker no notebook"
+	@echo "    notebook-pull      Só atualiza código (sem rebuild)"
+	@echo "    notebook-logs      Acompanha logs do worker no notebook"
+	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
 # Sobe apenas o banco na porta 5432 (padrão do Postgres).
@@ -135,6 +140,34 @@ worker-test:
 		$(if $(localidade),localidade="$(localidade)") \
 		$(if $(uf),uf="$(uf)") \
 		$(if $(cep),cep="$(cep)")
+
+# ─── Deploy no notebook ───────────────────────────────────────────────────────
+# Atualiza código e rebuild do worker no notebook remoto (ssh ismael-note).
+# O notebook roda apenas o worker — backend e frontend ficam na máquina local.
+
+NOTEBOOK := ismael-note
+NOTEBOOK_DIR := ~/easydoor
+
+.PHONY: notebook-deploy notebook-pull notebook-logs
+
+notebook-pull:
+	@echo "Atualizando código no notebook..."
+	@for repo in ed-worker ed-raspadinha ed-backend-api ed-infra; do \
+		echo "  $$repo ..."; \
+		ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/$$repo && git pull gitea master" 2>&1 | tail -1; \
+	done
+	@echo ""
+	@echo "Código atualizado."
+
+notebook-deploy: notebook-pull
+	@echo ""
+	@echo "Rebuild do worker no notebook..."
+	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && make worker-rebuild"
+	@echo ""
+	@echo "Deploy concluído."
+
+notebook-logs:
+	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && make worker-logs"
 
 # ─── Destruição total ─────────────────────────────────────────────────────────
 
