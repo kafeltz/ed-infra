@@ -4,7 +4,12 @@ help:
 	@echo ""
 	@echo "Infra EasyDoor"
 	@echo ""
-	@echo "  Infra principal"
+	@echo "  Desenvolvimento local"
+	@echo "    dev-up             Sobe apenas o banco (porta 5432) para dev local"
+	@echo "    dev-down           Para o banco de dev"
+	@echo "    dev-psql           Abre shell psql no banco de dev"
+	@echo ""
+	@echo "  Infra principal (PRD local)"
 	@echo "    up                 Sobe todos os containers e garante o banco criado"
 	@echo "    down               Para todos os containers"
 	@echo "    build              Reconstrói todas as imagens"
@@ -24,6 +29,35 @@ help:
 	@echo "    worker-test        Testa o Firefox dentro do container"
 	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
 	@echo ""
+
+# ─── Desenvolvimento local ────────────────────────────────────────────────────
+# Sobe apenas o banco na porta 5432 (padrão do Postgres).
+# Backend e frontend rodam nativamente no Linux (sem Docker).
+
+DEV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
+
+.PHONY: dev-up dev-down dev-psql
+
+dev-up:
+	mkdir -p postgres_logs audit_logs data
+	chmod 777 postgres_logs audit_logs data
+	$(DEV_COMPOSE) up -d db
+	@echo "Aguardando PostgreSQL aceitar conexões..."
+	@until PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d easydoor -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
+	@echo ""
+	@echo "Banco pronto em localhost:5432"
+	@echo ""
+	@echo "Agora rode em terminais separados:"
+	@echo "  cd ../ed-backend-api && make dev"
+	@echo "  cd ../ed-frontend-app && npm run dev"
+
+dev-down:
+	$(DEV_COMPOSE) down
+
+dev-psql:
+	PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d easydoor
+
+# ─── Infra principal (PRD local) ──────────────────────────────────────────────
 
 up:
 	mkdir -p postgres_logs audit_logs data

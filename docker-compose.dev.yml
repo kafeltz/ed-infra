@@ -1,0 +1,8 @@
+# Override para ambiente de desenvolvimento local.
+# Sobe apenas o banco na porta padrão 5432 (sem conflito com o backend local).
+# Uso: make dev-up
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
