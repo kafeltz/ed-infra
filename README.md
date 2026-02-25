@@ -9,6 +9,7 @@ Infraestrutura completa EasyDoor em Docker: PostgreSQL 18 + PostGIS + API backen
 | `db` | PG 18 + PostGIS 3 + pgaudit | 5434 (host) / 5432 |
 | `ed-backend-api` | python (FastAPI) | 8000 |
 | `ed-worker` | python:3.11-slim + Firefox | — |
+| `ed-geocoder` | python:3.11-slim | — |
 | `log_separator` | python:3.11-slim | — |
 | `nginx` | nginx:alpine | 4174, 4175, 4176 |
 | `ed-frontend-app` | node:20-alpine (Vite preview) | — (interno) |
@@ -37,13 +38,17 @@ O NGINX interno roteia `/api/` → backend e `/` → Vite preview. Um NGINX exte
                         │  │  ed-worker    │   │  │ PostgreSQL │      │
                         │  │               │   │  │ (easydoor  │      │
                         │  │  worker.py    ├───┘  │  -db)      │      │
-                        │  │    │          │      └────────────┘      │
-                        │  │    ▼          │  polling HTTP na API     │
-                        │  │  Camoufox()   │  (GET /worker/proximo-  │
-                        │  │    │          │   cep, POST /worker/    │
-                        │  │    ▼          │   anuncios, etc.)       │
-                        │  │  Firefox      │                          │
-                        │  └───────────────┘                          │
+                        │  │    │          │      └─────┬──────┘      │
+                        │  │    ▼          │  polling   │             │
+                        │  │  Camoufox()   │  HTTP na   │             │
+                        │  │    │          │  API       │             │
+                        │  │    ▼          │            │             │
+                        │  │  Firefox      │   ┌───────┴────────┐    │
+                        │  └───────────────┘   │  ed-geocoder   │    │
+                        │                      │  polling SQL   │    │
+                        │                      │  ViaCEP +      │    │
+                        │                      │  Nominatim     │    │
+                        │                      └────────────────┘    │
                         └──────────────────────────────────────────────┘
 ```
 
@@ -159,10 +164,15 @@ easydoor/
 ├── ed-infra/        ← este repo
 ├── ed-engine/       ← schema e lógica SQL
 ├── ed-backend-api/  ← API backend
+├── ed-geocoder/     ← scheduler de geocodificação
+├── ed-worker/       ← worker de scraping
+├── ed-raspadinha/   ← lib de scraping (usada pelo worker)
 ├── ed-frontend-app/ ← frontend principal
 ├── ed-admin/        ← painel admin
 └── ed-calibrador/   ← ferramenta de calibração
 ```
+
+**Todos os repositórios acima são necessários para o build.** O `docker compose build` usa `context: ../` (diretório pai), então cada serviço espera que seu repositório exista como pasta irmã do `ed-infra`. Se faltar algum, o build falha com erro `not found`.
 
 ### 1. Configurar variáveis de ambiente
 
@@ -239,6 +249,20 @@ make up       # recria infra limpa
 cd ../ed-engine && make schema && make seed
 ```
 
+## Geocoder (ed-geocoder)
+
+Scheduler que preenche lat/lon dos anúncios automaticamente. Faz polling no Postgres, encontra anúncios sem coordenadas e geocodifica via ViaCEP + Nominatim. Resultados ficam em `geocodificacao_cache` para evitar chamadas repetidas.
+
+- **Polling**: a cada 30s (configurável via `GEOCODER_POLL_INTERVAL`)
+- **Batch**: 50 anúncios por ciclo (configurável via `GEOCODER_BATCH_SIZE`)
+- **Rate limit**: 1 req/seg no Nominatim (sleep 1.1s entre chamadas)
+- **Acesso direto ao banco** (não passa pela API)
+
+```bash
+# Verificar logs do geocoder
+docker logs -f easydoor-geocoder
+```
+
 ## Migração PG 16 nativo → PG 18 Docker
 
 ```bash
@@ -293,6 +317,8 @@ ed-infra/
 │   └── Dockerfile                  # FastAPI (ed-backend-api)
 ├── worker/
 │   └── Dockerfile                  # Worker + Firefox (ed-worker + ed-raspadinha)
+├── geocoder/
+│   └── Dockerfile                  # Geocoder (ed-geocoder)
 ├── frontend/
 │   └── Dockerfile                  # Vite build + preview genérico (node 20)
 └── nginx/
