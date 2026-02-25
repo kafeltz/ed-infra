@@ -6,7 +6,7 @@ services:
     container_name: easydoor-db
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5434:5432"
+      - "5434:5432"
     env_file: .env
     volumes:
       - ./data:/var/lib/postgresql
@@ -46,7 +46,7 @@ services:
     container_name: easydoor-backend-api
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
       WORKER_API_KEY: ${WORKER_API_KEY}
@@ -86,9 +86,9 @@ services:
     container_name: easydoor-nginx
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4174:4174"
-      - "127.0.0.1:4175:4175"
-      - "127.0.0.1:4176:4176"
+      - "4174:4174"
+      - "4175:4175"
+      - "4176:4176"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
