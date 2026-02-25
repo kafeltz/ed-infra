@@ -152,7 +152,7 @@ NOTEBOOK_DIR := ~/easydoor
 
 notebook-pull:
 	@echo "Atualizando código no notebook..."
-	@for repo in ed-worker ed-raspadinha ed-backend-api ed-infra; do \
+	@for repo in ed-worker ed-raspadinha ed-backend-api ed-geocoder ed-infra; do \
 		echo "  $$repo ..."; \
 		ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/$$repo && git pull gitea master" 2>&1 | tail -1; \
 	done

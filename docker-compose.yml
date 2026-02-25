@@ -81,6 +81,20 @@ services:
       ed-backend-api:
         condition: service_healthy
 
+  ed-geocoder:
+    build:
+      context: ../
+      dockerfile: ed-infra/geocoder/Dockerfile
+    container_name: easydoor-geocoder
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
+      GEOCODER_POLL_INTERVAL: "30"
+      GEOCODER_BATCH_SIZE: "50"
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     container_name: easydoor-nginx
