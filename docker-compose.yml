@@ -49,6 +49,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
       WORKER_API_KEY: ${WORKER_API_KEY}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
