@@ -96,6 +96,20 @@ services:
       db:
         condition: service_healthy
 
+  ed-watchdog:
+    build:
+      context: ../
+      dockerfile: ed-infra/watchdog/Dockerfile
+    container_name: easydoor-watchdog
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     container_name: easydoor-nginx
