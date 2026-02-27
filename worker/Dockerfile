@@ -1,4 +1,6 @@
 FROM python:3.11-slim
+ARG WORKER_VERSION=""
+ENV WORKER_VERSION=$WORKER_VERSION
 
 # Dependências de sistema para o Firefox headless (Camoufox)
 RUN apt-get update && apt-get install -y --no-install-recommends \

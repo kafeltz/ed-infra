@@ -75,6 +75,8 @@ services:
     build:
       context: ../ed-backend-api
       dockerfile: ../ed-infra/backend/Dockerfile
+      args:
+        SERVER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-backend-api
     restart: unless-stopped
     ports:
@@ -103,6 +105,8 @@ services:
     build:
       context: ../
       dockerfile: ed-infra/worker/Dockerfile
+      args:
+        WORKER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-worker
     restart: unless-stopped
     shm_size: 2gb

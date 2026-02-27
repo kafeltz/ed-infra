@@ -1,5 +1,10 @@
 .DEFAULT_GOAL := help
 
+# Versão atual: hash curto do git (ex: a1b2c3d). Exportada para docker compose
+# usar nos build args de SERVER_VERSION e WORKER_VERSION.
+APP_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
+export APP_VERSION
+
 help:
 	@echo ""
 	@echo "Infra EasyDoor"
@@ -94,10 +99,12 @@ down:
 
 build:
 	cp -f .dockerignore ../
+	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
 	docker compose build
 
 rebuild:
 	cp -f .dockerignore ../
+	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
 	docker compose build
 	docker compose up -d --force-recreate
 
@@ -118,10 +125,12 @@ WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
 
 worker-build:
 	cp -f .dockerignore ../
+	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
 	$(WORKER_COMPOSE) build
 
 worker-rebuild:
 	cp -f .dockerignore ../
+	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
 	$(WORKER_COMPOSE) build
 	$(WORKER_COMPOSE) up -d --force-recreate
 

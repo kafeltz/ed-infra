@@ -79,6 +79,37 @@ cp .env.worker.example .env.worker
 
 Variáveis: `API_URL`, `WORKER_API_KEY`, `WORKER_MAX_TOTAL`, `WORKER_HEADLESS`.
 
+## Sincronização de versão servidor/worker
+
+O build injeta automaticamente a versão do código nas imagens Docker via build args.
+
+### Como funciona
+
+- `APP_VERSION` é calculada automaticamente no `Makefile` como o hash curto do git (`git rev-parse --short HEAD`)
+- Ao buildar, o Dockerfile do backend recebe `SERVER_VERSION=$APP_VERSION` e o do worker recebe `WORKER_VERSION=$APP_VERSION`
+- O backend rejeita com `409 Conflict` qualquer worker com `WORKER_VERSION` diferente de `SERVER_VERSION`
+- Workers parados com versão antiga ficam aguardando atualização manual
+
+### Fluxo de deploy
+
+```bash
+# 1. Atualizar código
+git pull --rebase gitea master
+
+# 2. Rebuild (SERVER_VERSION é tatuado automaticamente na imagem)
+make rebuild
+
+# 3. Atualizar workers remotos
+make notebook-deploy     # para o notebook
+# ou, para workers com systemd:
+# cd ../ed-worker && make update HOST=nome-do-host
+```
+
+### Importante
+
+- **Nunca defina `SERVER_VERSION` ou `WORKER_VERSION` no `.env`** — a versão vem do build, não do ambiente
+- Se o worker subir com `APP_VERSION=dev` (sem git), a validação do servidor aceitará `dev` como versão — útil para desenvolvimento local
+
 ## Schema do banco
 
 O container PostgreSQL sobe **sem tabelas**. O schema é gerenciado pelo `ed-engine`:

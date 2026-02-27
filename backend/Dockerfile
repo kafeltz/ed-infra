@@ -1,4 +1,6 @@
 FROM python:3.11-slim
+ARG SERVER_VERSION=""
+ENV SERVER_VERSION=$SERVER_VERSION
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt psycopg_pool
