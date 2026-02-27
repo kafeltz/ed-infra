@@ -1,0 +1,332 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ─── Design Tokens ────────────────────────────────────────── */
+:root {
+  --background:      hsl(215 60% 12%);
+  --foreground:      hsl(210 20% 95%);
+  --card:            hsl(215 55% 15%);
+  --card-elevated:   hsl(215 50% 18%);
+  --muted:           hsl(215 40% 20%);
+  --muted-fg:        hsl(215 20% 55%);
+  --accent:          hsl(160 100% 45%);
+  --accent-cyan:     hsl(185 100% 50%);
+  --border:          hsl(215 35% 25%);
+  --input-bg:        hsl(215 45% 16%);
+  --destructive:     hsl(0 65% 60%);
+  --radius:          12px;
+  --radius-sm:       8px;
+}
+
+/* ─── Reset / Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--accent-cyan); }
+
+/* ─── Layout ───────────────────────────────────────────────── */
+#kc-header { display: none; }
+
+.login-pf-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, hsl(160 100% 45% / 0.08) 0%, transparent 70%),
+    var(--background);
+}
+
+.login-pf-page .container-fluid {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ─── Card ──────────────────────────────────────────────────── */
+#kc-content {
+  background: linear-gradient(135deg, hsl(215 55% 15% / 0.9) 0%, hsl(215 50% 18% / 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(215 35% 25% / 0.6);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px hsl(215 60% 5% / 0.6), 0 0 40px hsl(160 100% 45% / 0.06);
+  padding: 40px 36px 36px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* ─── Logo ──────────────────────────────────────────────────── */
+.ed-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.ed-logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ─── Heading ───────────────────────────────────────────────── */
+#kc-page-title, .ed-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, hsl(160 100% 45%) 0%, hsl(185 100% 50%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ed-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* ─── Messages ──────────────────────────────────────────────── */
+#kc-content-wrapper .alert,
+.pf-v5-c-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.alert-error, .pf-m-danger {
+  background: hsl(0 65% 50% / 0.12);
+  border-color: hsl(0 65% 50% / 0.35);
+  color: hsl(0 65% 75%);
+}
+
+.alert-warning, .pf-m-warning {
+  background: hsl(35 100% 55% / 0.12);
+  border-color: hsl(35 100% 55% / 0.35);
+  color: hsl(35 100% 75%);
+}
+
+.alert-success, .pf-m-success {
+  background: hsl(160 100% 45% / 0.12);
+  border-color: hsl(160 100% 45% / 0.35);
+  color: hsl(160 100% 65%);
+}
+
+.alert-info, .pf-m-info {
+  background: hsl(185 100% 50% / 0.10);
+  border-color: hsl(185 100% 50% / 0.30);
+  color: hsl(185 100% 70%);
+}
+
+/* ─── Form ──────────────────────────────────────────────────── */
+.form-group, .pf-v5-c-form__group {
+  margin-bottom: 18px;
+}
+
+label, .pf-v5-c-form__label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-fg);
+  margin-bottom: 7px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+.form-control,
+.pf-v5-c-form-control {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+.form-control:focus,
+.pf-v5-c-form-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px hsl(160 100% 45% / 0.18);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder {
+  color: var(--muted-fg);
+}
+
+/* Field errors */
+.has-error .form-control { border-color: var(--destructive); }
+.pf-v5-c-form-control.pf-m-error { border-color: var(--destructive); }
+.help-block.error-msg,
+.pf-v5-c-form__helper-text.pf-m-error {
+  font-size: 0.8rem;
+  color: var(--destructive);
+  margin-top: 5px;
+}
+
+/* ─── Remember-me / Checkbox ───────────────────────────────── */
+.checkbox, .ed-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.checkbox label, .ed-checkbox-row label {
+  text-transform: none;
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+  margin: 0;
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ─── Primary Button ────────────────────────────────────────── */
+.btn-primary,
+#kc-login,
+#kc-register,
+#kc-reset-password-button,
+#kc-form-buttons .btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, hsl(160 100% 45%) 0%, hsl(175 100% 42%) 100%);
+  color: hsl(215 60% 8%);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
+  margin-top: 8px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px hsl(160 100% 45% / 0.25);
+}
+
+.btn-primary:hover,
+#kc-login:hover,
+#kc-register:hover,
+#kc-reset-password-button:hover {
+  opacity: 0.9;
+  box-shadow: 0 6px 24px hsl(160 100% 45% / 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+#kc-login:active {
+  transform: translateY(0);
+}
+
+/* ─── Secondary / Links section ─────────────────────────────── */
+#kc-form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+#kc-registration, .ed-footer-links {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid hsl(215 35% 25% / 0.5);
+  font-size: 0.875rem;
+  color: var(--muted-fg);
+}
+
+#kc-registration a, .ed-footer-links a {
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* ─── OTP specific ──────────────────────────────────────────── */
+.otp-grid, #kc-otp-credential-form { margin-bottom: 18px; }
+
+.otp-grid input[type="text"] {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.15em;
+}
+
+/* ─── Info text / verify email ──────────────────────────────── */
+.ed-info-text {
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.ed-info-text strong { color: var(--foreground); }
+
+/* ─── Error page ────────────────────────────────────────────── */
+.ed-error-icon {
+  text-align: center;
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+/* ─── Divider ───────────────────────────────────────────────── */
+.ed-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: var(--muted-fg);
+  font-size: 0.8rem;
+}
+
+.ed-divider::before, .ed-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── Animations ────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #kc-content { padding: 28px 20px 24px; }
+  .login-pf-page { padding: 16px 12px; }
+}
+
+/* ─── Hide Keycloak default chrome we don't want ───────────── */
+.pf-v5-c-login__header, .pf-v5-c-login__footer { display: none !important; }
+.pf-v5-c-login { background: transparent !important; }
+.pf-v5-c-login__container { padding: 0 !important; max-width: none !important; }

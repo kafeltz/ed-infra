@@ -60,6 +60,7 @@ services:
       KC_LOG_LEVEL: INFO
     volumes:
       - ./keycloak/data/import:/opt/keycloak/data/import:ro
+      - ./keycloak/themes/easydoor:/opt/keycloak/themes/easydoor:ro
     depends_on:
       db:
         condition: service_healthy
