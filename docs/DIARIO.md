@@ -59,3 +59,46 @@ proxy_set_header Host "localhost";
 ```
 
 Aplicado nos três frontends: `ed-frontend-app`, `ed-admin`, `ed-calibrador`.
+
+---
+
+## 2026-02-27 — Containers sem comunicação de rede (iptables-nft vs iptables-legacy)
+
+### Sintoma
+
+Frontend acessível diretamente pelo IP do container (`172.20.0.x:4175`) mas não via `localhost:4175`. NGINX retornava 504 Gateway Timeout. Ping entre containers na mesma rede resultava em 100% de perda de pacotes.
+
+### Diagnóstico
+
+1. `docker compose ps` confirmou que o NGINX estava com binding correto (`0.0.0.0:4174-4176`)
+2. `docker exec easydoor-nginx ping ed-frontend-app` → 100% packet loss (mesmo estando na mesma rede `ed-infra_default`)
+3. Logs do nginx: `upstream timed out (110: Operation timed out) while connecting to upstream`
+4. `iptables --version` revelou: `iptables v1.8.7 (nf_tables)` — sistema usando `iptables-nft`
+
+### Causa
+
+O Docker escreve suas regras de FORWARD e NAT usando `iptables-legacy`, mas o sistema estava configurado para usar `iptables-nft` como backend padrão. As regras escritas pelo Docker ficavam **invisíveis para o kernel** (que lia apenas as regras nftables), então todo tráfego inter-container era silenciosamente descartado.
+
+Isso ocorre em sistemas Ubuntu/Debian modernos onde `update-alternatives` aponta `iptables` para `/usr/sbin/iptables-nft` por padrão.
+
+### Solução
+
+```bash
+# Trocar para o backend legacy (que o Docker usa)
+sudo update-alternatives --set iptables /usr/sbin/iptables-legacy
+sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
+# Reiniciar o Docker para recriar as regras no backend correto
+sudo systemctl restart docker
+
+# Recriar todos os containers (a rede precisa ser recriada)
+docker compose down && docker compose up -d
+```
+
+### Como verificar se o problema está ativo
+
+```bash
+iptables --version
+# Se mostrar "(nf_tables)", o Docker não está conseguindo registrar suas regras
+# Se mostrar "(legacy)", está correto
+```
