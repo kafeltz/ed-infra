@@ -102,3 +102,73 @@ iptables --version
 # Se mostrar "(nf_tables)", o Docker não está conseguindo registrar suas regras
 # Se mostrar "(legacy)", está correto
 ```
+
+---
+
+## 2026-02-27 — 502 Bad Gateway nos frontends após `--force-recreate`
+
+### Sintoma
+
+Após recriar os containers dos frontends (`ed-frontend-app`, `ed-admin`, `ed-calibrador`) com `docker compose up -d --force-recreate`, o NGINX retornava `502 Bad Gateway` para todos eles. Os containers Vite estavam rodando normalmente.
+
+### Diagnóstico
+
+```
+[error] connect() failed (111: Connection refused) while connecting to upstream
+upstream: "http://172.20.0.2:4176/"
+```
+
+O NGINX tentava conectar ao IP antigo do container, mas os IPs haviam mudado após o recreate.
+
+### Causa
+
+O NGINX resolve os hostnames dos `proxy_pass` em tempo de inicialização e cacheia os IPs indefinidamente. Quando containers são recriados e recebem novos IPs via DHCP interno do Docker, o NGINX continua tentando o IP antigo.
+
+### Solução
+
+Adicionar o resolver DNS interno do Docker ao `nginx.conf` e usar variáveis nos `proxy_pass` — isso força o NGINX a re-resolver via DNS a cada `valid=10s` segundos:
+
+```nginx
+http {
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    server {
+        location / {
+            set $upstream http://ed-frontend-app:4175;
+            proxy_pass $upstream;  # variável = resolução dinâmica
+        }
+    }
+}
+```
+
+Sem a variável `$upstream`, mesmo com o `resolver` configurado o NGINX ignora o DNS e usa o IP cacheado.
+
+---
+
+## 2026-02-27 — Worker com erro 500: coluna `worker_hostname` ausente
+
+### Sintoma
+
+Container `easydoor-worker` em restart loop. Logs do backend:
+
+```
+psycopg.errors.UndefinedColumn: column "worker_hostname" of relation "ceps_cadastrados" does not exist
+```
+
+### Causa
+
+O `ed-backend-api` foi atualizado para gravar o hostname do worker na tabela `ceps_cadastrados`, mas a migração correspondente não foi adicionada ao `ed-engine`. Como `make schema` usa `CREATE TABLE IF NOT EXISTS`, ele não altera tabelas existentes — a coluna simplesmente nunca foi criada.
+
+### Solução
+
+```bash
+# Aplicar a migração no banco em execução
+PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d easydoor \
+  -c "ALTER TABLE ceps_cadastrados ADD COLUMN IF NOT EXISTS worker_hostname TEXT;"
+```
+
+E atualizar o `sql/schema.sql` do `ed-engine` para incluir a coluna na definição da tabela (para novas instalações).
+
+### Lição
+
+Ao adicionar colunas ao schema via backend, sempre atualizar `ed-engine/sql/schema.sql` **na mesma PR**. O `make schema` é idempotente mas não executa migrações — não há sistema de migrations automático.
