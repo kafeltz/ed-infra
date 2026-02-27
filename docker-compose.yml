@@ -45,7 +45,7 @@ services:
     container_name: easydoor-keycloak
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db:5432/keycloak
@@ -77,7 +77,7 @@ services:
     container_name: easydoor-backend-api
     restart: unless-stopped
     ports:
-      - "8082:8000"
+      - "8080:8000"
     environment:
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
