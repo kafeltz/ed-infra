@@ -84,7 +84,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
       WORKER_API_KEY: ${WORKER_API_KEY}
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8080}
+      KEYCLOAK_ISSUER_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
       KEYCLOAK_REALM: easydoor
       KEYCLOAK_CLIENT_ID: easydoor-frontend
     healthcheck:
@@ -170,7 +170,7 @@ services:
       dockerfile: ../ed-infra/frontend/Dockerfile
       args:
         PORT: "4175"
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8080}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
         VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-easydoor}
         VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-easydoor-frontend}
     container_name: easydoor-frontend
