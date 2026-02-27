@@ -191,15 +191,15 @@ Isso cria os diretórios de dados, sobe todos os containers e garante que o banc
 
 ### 3. Aplicar o schema do banco
 
-O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-engine`:
+O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-engine` via migrations:
 
 ```bash
 cd ../ed-engine
-make schema   # cria toda a estrutura
+make migrate  # aplica todas as migrations pendentes
 make seed     # popula dados iniciais (mat_ajustes + anúncios)
 ```
 
-Ambos os comandos são idempotentes e podem ser reexecutados a qualquer momento sem perder dados.
+`make migrate` é idempotente — pode ser reexecutado a qualquer momento sem perder dados.
 
 ### 4. Verificar que tudo está funcionando
 
@@ -246,7 +246,7 @@ Se precisar apagar tudo e reinicializar (ex: banco corrompido, testar migração
 ```bash
 make nuke     # destrói tudo (pede confirmação digitando DESTRUIR)
 make up       # recria infra limpa
-cd ../ed-engine && make schema && make seed
+cd ../ed-engine && make migrate && make seed
 ```
 
 ## Geocoder (ed-geocoder)
