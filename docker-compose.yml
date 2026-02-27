@@ -39,6 +39,36 @@ services:
         --audit-log /output/audit.log
         --normal-log /output/postgres.log
 
+  keycloak:
+    build:
+      context: ./keycloak
+    container_name: easydoor-keycloak
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${KC_HOSTNAME:-localhost}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-EasyDoor@2024}
+      KC_LOG_LEVEL: INFO
+    volumes:
+      - ./keycloak/data/import:/opt/keycloak/data/import:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9000'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
   ed-backend-api:
     build:
       context: ../ed-backend-api
@@ -51,6 +81,10 @@ services:
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
       WORKER_API_KEY: ${WORKER_API_KEY}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8080}
+      KEYCLOAK_REALM: easydoor
+      KEYCLOAK_CLIENT_ID: easydoor-frontend
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 10s
@@ -59,6 +93,8 @@ services:
       start_period: 15s
     depends_on:
       db:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
 
   ed-worker:
@@ -132,6 +168,9 @@ services:
       dockerfile: ../ed-infra/frontend/Dockerfile
       args:
         PORT: "4175"
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8080}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-easydoor}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-easydoor-frontend}
     container_name: easydoor-frontend
     restart: unless-stopped
     environment:

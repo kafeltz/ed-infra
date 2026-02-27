@@ -17,6 +17,7 @@ help:
 	@echo "    logs               Acompanha logs em tempo real"
 	@echo "    psql               Abre shell psql no banco"
 	@echo "    restart-<serviço>  Reinicia um serviço (ex: make restart-db)"
+	@echo "    db-keycloak        Cria o banco 'keycloak' se não existir"
 	@echo "    nuke               ⚠  Destrói tudo — containers + dados + logs"
 	@echo ""
 	@echo "  Worker remoto  (docker-compose.worker.yml + .env.worker)"
@@ -75,7 +76,18 @@ up:
 		"SELECT 1 FROM pg_database WHERE datname='easydoor'" | grep -q 1 || \
 		PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres \
 		-c "CREATE DATABASE easydoor OWNER easydoor;"
-	@echo "Banco pronto."
+	@PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres -tc \
+		"SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 || \
+		PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres \
+		-c "CREATE DATABASE keycloak OWNER easydoor;"
+	@echo "Bancos prontos (easydoor + keycloak)."
+
+db-keycloak:
+	@PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres -tc \
+		"SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 || \
+		PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres \
+		-c "CREATE DATABASE keycloak OWNER easydoor;"
+	@echo "Banco keycloak pronto."
 
 down:
 	docker compose down

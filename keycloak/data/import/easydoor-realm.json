@@ -1,0 +1,107 @@
+{
+  "realm": "easydoor",
+  "enabled": true,
+  "displayName": "EasyDoor",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Administrador do sistema" },
+      { "name": "avaliador", "description": "Pode realizar avaliações" },
+      { "name": "viewer", "description": "Acesso somente leitura" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "easydoor-frontend",
+      "name": "EasyDoor Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:4175/*",
+        "https://stage.easydoor.ai/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:4175",
+        "https://stage.easydoor.ai"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:4175/*##https://stage.easydoor.ai/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@easydoor.ai",
+      "firstName": "Admin",
+      "lastName": "EasyDoor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "EasyDoor@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "avaliador"]
+    },
+    {
+      "username": "ismael",
+      "email": "ismael@easydoor.ai",
+      "firstName": "Ismael",
+      "lastName": "Santos",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "EasyDoor@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "avaliador"]
+    },
+    {
+      "username": "demo",
+      "email": "demo@easydoor.ai",
+      "firstName": "Demo",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": true
+        }
+      ],
+      "realmRoles": ["avaliador", "viewer"]
+    }
+  ]
+}
