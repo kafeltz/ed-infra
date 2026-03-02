@@ -93,17 +93,20 @@ O build injeta automaticamente a versão do código nas imagens Docker via build
 ### Fluxo de deploy
 
 ```bash
-# 1. Atualizar código
+# 1. Atualizar código e buildar
 git pull --rebase gitea master
+make build-push   # builda localmente e envia para o registry
 
-# 2. Rebuild (SERVER_VERSION é tatuado automaticamente na imagem)
-make rebuild
+# 2. Servidor PRD (se não houver CI ativo)
+ssh usuario@servidor
+cd ~/ed-infra && git pull gitea master
+docker compose pull && docker compose up -d --no-build --remove-orphans
 
-# 3. Atualizar workers remotos
-make notebook-deploy     # para o notebook
-# ou, para workers com systemd:
-# cd ../ed-worker && make update HOST=nome-do-host
+# 3. Workers remotos (em cada máquina)
+cd ~/easydoor/ed-infra && git pull gitea master && make worker-up
 ```
+
+Ver `docs/deploy.md` para o fluxo completo.
 
 ### Importante
 
