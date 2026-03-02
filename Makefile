@@ -5,6 +5,14 @@
 APP_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export APP_VERSION
 
+BUILD_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.build.yml
+WORKER_BUILD_COMPOSE := docker compose -f docker-compose.worker.yml -f docker-compose.worker.build.yml
+
+REGISTRY := docker.easydoor.ai/easydoor
+SERVICES_VERSIONED := ed-backend-api ed-worker ed-geocoder ed-watchdog \
+                      ed-frontend-app ed-admin ed-calibrador
+SERVICES_STABLE := ed-postgres ed-keycloak
+
 help:
 	@echo ""
 	@echo "Infra EasyDoor"
@@ -34,6 +42,13 @@ help:
 	@echo "    worker-logs        Acompanha logs do worker em tempo real"
 	@echo "    worker-test        Testa o Firefox dentro do container"
 	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
+	@echo ""
+	@echo "  Registry (docker.easydoor.ai)"
+	@echo "    push               Envia imagens buildadas para o registry"
+	@echo "    build-push         Builda e envia todas as imagens"
+	@echo ""
+	@echo "  Deploy PRD"
+	@echo "    prd-deploy         Deploy em produção via SSH (PRD_HOST=<host>)"
 	@echo ""
 	@echo "  Deploy no notebook  (ssh ismael-note)"
 	@echo "    notebook-deploy    Atualiza código e rebuild do worker no notebook"
@@ -100,12 +115,12 @@ down:
 build:
 	cp -f .dockerignore ../
 	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	docker compose build
+	$(BUILD_COMPOSE) build
 
 rebuild:
 	cp -f .dockerignore ../
 	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	docker compose build
+	$(BUILD_COMPOSE) build
 	docker compose up -d --force-recreate
 
 logs:
@@ -126,12 +141,12 @@ WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
 worker-build:
 	cp -f .dockerignore ../
 	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_COMPOSE) build
+	$(WORKER_BUILD_COMPOSE) build
 
 worker-rebuild:
 	cp -f .dockerignore ../
 	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_COMPOSE) build
+	$(WORKER_BUILD_COMPOSE) build
 	$(WORKER_COMPOSE) up -d --force-recreate
 
 worker-up:
@@ -161,6 +176,31 @@ worker-test:
 		$(if $(localidade),localidade="$(localidade)") \
 		$(if $(uf),uf="$(uf)") \
 		$(if $(cep),cep="$(cep)")
+
+# ─── Registry ──────────────────────────────────────────────────────────────
+
+push:
+	@echo "Push de imagens para $(REGISTRY) com tag $(APP_VERSION)..."
+	@for svc in $(SERVICES_VERSIONED); do \
+		docker tag $(REGISTRY)/$$svc:$(APP_VERSION) $(REGISTRY)/$$svc:latest 2>/dev/null || true; \
+		docker push $(REGISTRY)/$$svc:$(APP_VERSION); \
+		docker push $(REGISTRY)/$$svc:latest; \
+	done
+	@for svc in $(SERVICES_STABLE); do \
+		docker push $(REGISTRY)/$$svc:latest; \
+	done
+
+build-push: build push
+
+# ─── Deploy PRD ────────────────────────────────────────────────────────────
+
+PRD_HOST ?= prd-server
+
+prd-deploy:
+	@echo "Deploy em $(PRD_HOST)..."
+	ssh $(PRD_HOST) "cd ~/ed-infra && git pull gitea master && \
+		docker compose pull && \
+		docker compose up -d --no-build --remove-orphans"
 
 # ─── Deploy no notebook ───────────────────────────────────────────────────────
 # Atualiza código e rebuild do worker no notebook remoto (ssh ismael-note).

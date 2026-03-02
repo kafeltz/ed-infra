@@ -1,0 +1,63 @@
+name: Build e Push para Registry
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [service-updated]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ed-infra
+        uses: actions/checkout@v4
+
+      - name: Calcular APP_VERSION
+        id: version
+        run: echo "APP_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Clonar repos irmãos
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          BASE_URL="https://ismael.santos:${GITEA_TOKEN}@git.easydoor.ai/EasyDoor"
+          for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+            git clone "${BASE_URL}/${repo}.git" "../${repo}" || true
+          done
+
+      - name: Copiar .dockerignore para o diretório pai
+        run: cp -f .dockerignore ../
+
+      - name: Login no Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: docker.easydoor.ai
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build das imagens
+        env:
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.build.yml build
+
+      - name: Tag e Push — serviços versionados
+        env:
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+          REGISTRY: docker.easydoor.ai/easydoor
+        run: |
+          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+            docker tag ${REGISTRY}/${svc}:${APP_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
+            docker push ${REGISTRY}/${svc}:${APP_VERSION}
+            docker push ${REGISTRY}/${svc}:latest
+          done
+
+      - name: Tag e Push — serviços estáveis
+        env:
+          REGISTRY: docker.easydoor.ai/easydoor
+        run: |
+          for svc in ed-postgres ed-keycloak; do
+            docker push ${REGISTRY}/${svc}:latest
+          done

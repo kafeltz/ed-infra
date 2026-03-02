@@ -10,11 +10,7 @@
 
 services:
   ed-worker:
-    build:
-      context: ../
-      dockerfile: ed-infra/worker/Dockerfile
-      args:
-        WORKER_VERSION: ${APP_VERSION:-dev}
+    image: docker.easydoor.ai/easydoor/ed-worker:${APP_VERSION:-latest}
     container_name: easydoor-worker
     restart: unless-stopped
     shm_size: 2gb

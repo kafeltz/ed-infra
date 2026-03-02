@@ -1,0 +1,58 @@
+# docker-compose.build.yml — overlay para dev local com build das imagens
+# Uso: docker compose -f docker-compose.yml -f docker-compose.build.yml build
+services:
+  db:
+    build:
+      context: ./postgres
+
+  keycloak:
+    build:
+      context: ./keycloak
+
+  ed-backend-api:
+    build:
+      context: ../ed-backend-api
+      dockerfile: ../ed-infra/backend/Dockerfile
+      args:
+        SERVER_VERSION: ${APP_VERSION:-dev}
+
+  ed-worker:
+    build:
+      context: ../
+      dockerfile: ed-infra/worker/Dockerfile
+      args:
+        WORKER_VERSION: ${APP_VERSION:-dev}
+
+  ed-geocoder:
+    build:
+      context: ../
+      dockerfile: ed-infra/geocoder/Dockerfile
+
+  ed-watchdog:
+    build:
+      context: ../
+      dockerfile: ed-infra/watchdog/Dockerfile
+
+  ed-frontend-app:
+    build:
+      context: ../ed-frontend-app
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4175"
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-easydoor}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-easydoor-frontend}
+
+  ed-admin:
+    build:
+      context: ../ed-admin
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4176"
+
+  ed-calibrador:
+    build:
+      context: ../ed-calibrador
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4174"
