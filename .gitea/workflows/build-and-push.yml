@@ -88,7 +88,17 @@ jobs:
           docker compose pull
           docker compose up -d --no-build --remove-orphans
 
-      # 9. Limpar imagens antigas do builder
+      # 9. Rebuild completo via Makefile
+      - name: Rebuild e subir serviços via Make
+        working-directory: ed-infra
+        env:
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+        run: |
+          make rebuild up
+          make worker-rebuild worker-up
+
+
+      # 10. Limpar imagens antigas do builder
       - name: Cleanup Docker automático
         if: always()
         run: |
