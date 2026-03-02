@@ -34,7 +34,7 @@ jobs:
 
           cd $GITHUB_WORKSPACE
 
-          for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+          for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador ed-engine; do
             git clone "${BASE_URL}/${repo}.git" "${repo}" || true
           done
 
@@ -98,7 +98,16 @@ jobs:
           make worker-rebuild worker-up
 
 
-      # 10. Limpar imagens antigas do builder
+      # 10. Aplicar migrations do banco
+      - name: Aplicar migrations do banco
+        working-directory: ed-engine
+        run: |
+          source /opt/easydoor-stack-stage/ed-infra/.env
+          PGPASSWORD="${POSTGRES_PASSWORD}" \
+          PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
+          ./migrate.sh migrate
+
+      # 11. Limpar imagens antigas do builder
       - name: Cleanup Docker automático
         if: always()
         run: |
