@@ -1,12 +1,10 @@
 name: Build e Push para Registry
-
 on:
   push:
     branches: [master]
   workflow_dispatch:
   repository_dispatch:
     types: [service-updated]
-
 jobs:
   build-and-push:
     runs-on: [self-hosted, ubuntu-latest]
@@ -24,11 +22,11 @@ jobs:
         run: |
           BASE_URL="https://deploy:${TOKEN}@git.easydoor.ai/EasyDoor"
           for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            git clone "${BASE_URL}/${repo}.git" "../${repo}" || true
+            git clone "${BASE_URL}/${repo}.git" "$GITHUB_WORKSPACE/../${repo}" || true
           done
 
       - name: Copiar .dockerignore para o diretório pai
-        run: cp -f .dockerignore ../
+        run: cp -f $GITHUB_WORKSPACE/.dockerignore $GITHUB_WORKSPACE/../
 
       - name: Login no Docker Registry
         uses: docker/login-action@v3
@@ -41,6 +39,7 @@ jobs:
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
         run: |
+          cd $GITHUB_WORKSPACE
           docker compose build
 
       - name: Tag e Push — serviços versionados
@@ -48,6 +47,7 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
           REGISTRY: docker.easydoor.ai/easydoor
         run: |
+          cd $GITHUB_WORKSPACE
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             docker tag ${REGISTRY}/${svc}:${APP_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
             docker push ${REGISTRY}/${svc}:${APP_VERSION}
