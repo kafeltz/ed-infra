@@ -1,33 +1,50 @@
 name: Build e Push para Registry
+
 on:
   push:
     branches: [master]
   workflow_dispatch:
   repository_dispatch:
     types: [service-updated]
+
 jobs:
   build-and-push:
     runs-on: [self-hosted, ubuntu-latest]
+
     steps:
+
+      # 1. Checkout do ed-infra dentro do workspace
       - name: Checkout ed-infra
         uses: actions/checkout@v4
+        with:
+          path: ed-infra
 
+      # 2. Calcular versão
       - name: Calcular APP_VERSION
         id: version
+        working-directory: ed-infra
         run: echo "APP_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+      # 3. Clonar repos irmãos no mesmo nível do ed-infra
       - name: Clonar repos irmãos
         env:
           TOKEN: ${{ secrets.TOKEN }}
         run: |
           BASE_URL="https://deploy:${TOKEN}@git.easydoor.ai/EasyDoor"
+
+          cd $GITHUB_WORKSPACE
+
           for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            git clone "${BASE_URL}/${repo}.git" "$GITHUB_WORKSPACE/${repo}" || true
+            git clone "${BASE_URL}/${repo}.git" "${repo}" || true
           done
 
-      - name: Copiar .dockerignore para o diretório pai
-        run: cp -f $WORKSPACE/.dockerignore $WORKSPACE/../
+      # DEBUG opcional
+      - name: Debug estrutura
+        run: |
+          ls -lah
+          ls -lah ed-infra
 
+      # 4. Login no registry
       - name: Login no Docker Registry
         uses: docker/login-action@v3
         with:
@@ -35,33 +52,35 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
+      # 5. Build usando o docker-compose dentro do ed-infra
       - name: Build das imagens
+        working-directory: ed-infra
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-        run: |
-          cd $WORKSPACE
-          docker compose build
+        run: docker compose build
 
+      # 6. Push versionados
       - name: Tag e Push — serviços versionados
+        working-directory: ed-infra
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
           REGISTRY: docker.easydoor.ai/easydoor
         run: |
-          cd $GITHUB_WORKSPACE
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             docker tag ${REGISTRY}/${svc}:${APP_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
             docker push ${REGISTRY}/${svc}:${APP_VERSION}
             docker push ${REGISTRY}/${svc}:latest
           done
 
+      # 7. Push serviços estáveis
       - name: Tag e Push — serviços estáveis
         env:
           REGISTRY: docker.easydoor.ai/easydoor
         run: |
-          for svc in ed-postgres ed-keycloak; do
-            docker push ${REGISTRY}/${svc}:latest
-          done
+          docker push ${REGISTRY}/ed-postgres:latest
+          docker push ${REGISTRY}/ed-keycloak:latest
 
+      # 8. Deploy
       - name: Deploy no servidor
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
