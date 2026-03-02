@@ -59,15 +59,11 @@ make push
 
 ### 4. Deploy no servidor PRD
 
-```bash
-make prd-deploy PRD_HOST=usuario@servidor
-```
-
-O que esse target faz via SSH:
+No servidor:
 ```bash
 cd ~/ed-infra
-git pull gitea master      # atualiza compose files e configs
-docker compose pull        # baixa as novas imagens do registry
+git pull gitea master
+docker compose pull
 docker compose up -d --no-build --remove-orphans
 ```
 

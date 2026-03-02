@@ -47,9 +47,6 @@ help:
 	@echo "    push               Envia imagens buildadas para o registry"
 	@echo "    build-push         Builda e envia todas as imagens"
 	@echo ""
-	@echo "  Deploy PRD"
-	@echo "    prd-deploy         Deploy em produção via SSH (PRD_HOST=<host>)"
-	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
 # Sobe apenas o banco na porta 5432 (padrão do Postgres).
@@ -186,16 +183,6 @@ push:
 	done
 
 build-push: build push
-
-# ─── Deploy PRD ────────────────────────────────────────────────────────────
-
-PRD_HOST ?= prd-server
-
-prd-deploy:
-	@echo "Deploy em $(PRD_HOST)..."
-	ssh $(PRD_HOST) "cd ~/ed-infra && git pull gitea master && \
-		docker compose pull && \
-		docker compose up -d --no-build --remove-orphans"
 
 # ─── Destruição total ─────────────────────────────────────────────────────────
 
