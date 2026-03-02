@@ -88,12 +88,10 @@ jobs:
           docker compose pull
           docker compose up -d --no-build --remove-orphans
 
-      # 9. Limpar Containeres
+      # 9. Limpar imagens antigas do builder
       - name: Cleanup Docker automático
         if: always()
         run: |
-          docker compose -f ed-infra/docker-compose.yml down --remove-orphans || true
           docker builder prune -af || true
           docker image prune -af || true
           docker container prune -f || true
-          docker volume prune -f || true
