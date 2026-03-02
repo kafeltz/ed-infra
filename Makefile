@@ -50,10 +50,6 @@ help:
 	@echo "  Deploy PRD"
 	@echo "    prd-deploy         Deploy em produção via SSH (PRD_HOST=<host>)"
 	@echo ""
-	@echo "  Deploy no notebook  (ssh ismael-note)"
-	@echo "    notebook-deploy    Pull da imagem e recria o worker no notebook"
-	@echo "    notebook-logs      Acompanha logs do worker no notebook"
-	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
 # Sobe apenas o banco na porta 5432 (padrão do Postgres).
@@ -200,26 +196,6 @@ prd-deploy:
 	ssh $(PRD_HOST) "cd ~/ed-infra && git pull gitea master && \
 		docker compose pull && \
 		docker compose up -d --no-build --remove-orphans"
-
-# ─── Deploy no notebook ───────────────────────────────────────────────────────
-# O notebook roda apenas o worker via imagem do registry.
-# Pré-requisito (uma vez): docker login docker.easydoor.ai no notebook.
-
-NOTEBOOK := ismael-note
-NOTEBOOK_DIR := ~/easydoor
-
-.PHONY: notebook-deploy notebook-logs
-
-notebook-deploy:
-	@echo "Deploy do worker no notebook..."
-	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && git pull gitea master && \
-		$(WORKER_COMPOSE) pull && \
-		$(WORKER_COMPOSE) up -d --force-recreate"
-	@echo ""
-	@echo "Deploy concluído."
-
-notebook-logs:
-	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && make worker-logs"
 
 # ─── Destruição total ─────────────────────────────────────────────────────────
 

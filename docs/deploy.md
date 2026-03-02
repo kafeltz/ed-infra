@@ -81,15 +81,15 @@ docker compose up -d --no-build --remove-orphans
 |--------|-----|-------------|
 | `ed-postgres` | `:latest` | Raramente (mudança no Dockerfile do postgres) |
 | `ed-keycloak` | `:latest` | Raramente (mudança no Dockerfile do keycloak) |
-| `ed-backend-api` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-worker` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-geocoder` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-watchdog` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-frontend-app` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-admin` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
-| `ed-calibrador` | `:88b1ae3` + `:latest` | A cada push em qualquer serviço |
+| `ed-backend-api` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-worker` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-geocoder` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-watchdog` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-frontend-app` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-admin` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
+| `ed-calibrador` | `:<hash>` + `:latest` | A cada push em qualquer serviço |
 
-`APP_VERSION` = hash curto do HEAD de `ed-infra` (ex: `88b1ae3`).
+`APP_VERSION` = hash curto do HEAD de `ed-infra` no momento do build.
 
 ---
 
