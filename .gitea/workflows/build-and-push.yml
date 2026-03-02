@@ -84,6 +84,6 @@ jobs:
       - name: Deploy no servidor
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
-          git pull gitea master
+          git pull
           docker compose pull
           docker compose up -d --no-build --remove-orphans
