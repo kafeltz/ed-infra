@@ -34,6 +34,9 @@ help:
 	@echo "    worker-logs        Acompanha logs do worker em tempo real"
 	@echo "    worker-test        Testa o Firefox dentro do container"
 	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
+	@echo "    worker-update      Puxa imagem latest do registry e reinicia se necessário"
+	@echo "    worker-autoupdate-install    Instala cronjob de atualização automática (5 min)"
+	@echo "    worker-autoupdate-uninstall  Remove o cronjob"
 	@echo ""
 	@echo "  Build e Registry (docker.easydoor.ai)"
 	@echo "    build              Builda todas as imagens"
@@ -169,6 +172,21 @@ worker-rebuild:
 	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
 	$(WORKER_COMPOSE) build
 	$(WORKER_COMPOSE) up -d --force-recreate
+
+worker-update:
+	bash scripts/worker-autoupdate.sh
+
+AUTOUPDATE_SCRIPT := $(CURDIR)/scripts/worker-autoupdate.sh
+AUTOUPDATE_LOG    := /tmp/worker-autoupdate.log
+AUTOUPDATE_CRON   := */5 * * * * bash $(AUTOUPDATE_SCRIPT) >> $(AUTOUPDATE_LOG) 2>&1
+
+worker-autoupdate-install:
+	@( crontab -l 2>/dev/null | grep -v worker-autoupdate.sh ; echo "$(AUTOUPDATE_CRON)" ) | crontab -
+	@echo "Cronjob instalado. Verifique com: crontab -l"
+
+worker-autoupdate-uninstall:
+	@crontab -l 2>/dev/null | grep -v worker-autoupdate.sh | crontab -
+	@echo "Cronjob removido."
 
 build-push: build push
 
