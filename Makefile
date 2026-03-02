@@ -51,8 +51,7 @@ help:
 	@echo "    prd-deploy         Deploy em produção via SSH (PRD_HOST=<host>)"
 	@echo ""
 	@echo "  Deploy no notebook  (ssh ismael-note)"
-	@echo "    notebook-deploy    Atualiza código e rebuild do worker no notebook"
-	@echo "    notebook-pull      Só atualiza código (sem rebuild)"
+	@echo "    notebook-deploy    Pull da imagem e recria o worker no notebook"
 	@echo "    notebook-logs      Acompanha logs do worker no notebook"
 	@echo ""
 
@@ -203,27 +202,19 @@ prd-deploy:
 		docker compose up -d --no-build --remove-orphans"
 
 # ─── Deploy no notebook ───────────────────────────────────────────────────────
-# Atualiza código e rebuild do worker no notebook remoto (ssh ismael-note).
-# O notebook roda apenas o worker — backend e frontend ficam na máquina local.
+# O notebook roda apenas o worker via imagem do registry.
+# Pré-requisito (uma vez): docker login docker.easydoor.ai no notebook.
 
 NOTEBOOK := ismael-note
 NOTEBOOK_DIR := ~/easydoor
 
-.PHONY: notebook-deploy notebook-pull notebook-logs
+.PHONY: notebook-deploy notebook-logs
 
-notebook-pull:
-	@echo "Atualizando código no notebook..."
-	@for repo in ed-worker ed-raspadinha ed-backend-api ed-geocoder ed-infra; do \
-		echo "  $$repo ..."; \
-		ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/$$repo && git pull gitea master" 2>&1 | tail -1; \
-	done
-	@echo ""
-	@echo "Código atualizado."
-
-notebook-deploy: notebook-pull
-	@echo ""
-	@echo "Rebuild do worker no notebook..."
-	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && make worker-rebuild"
+notebook-deploy:
+	@echo "Deploy do worker no notebook..."
+	ssh $(NOTEBOOK) "cd $(NOTEBOOK_DIR)/ed-infra && git pull gitea master && \
+		$(WORKER_COMPOSE) pull && \
+		$(WORKER_COMPOSE) up -d --force-recreate"
 	@echo ""
 	@echo "Deploy concluído."
 

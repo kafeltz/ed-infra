@@ -6,7 +6,7 @@ subir toda a infra (banco, frontends).
 ## Como funciona
 
 O worker roda isolado em Docker e se comunica com o servidor exclusivamente
-via **HTTP** — sem SSH tunnel, sem acesso direto ao banco, sem Redis.
+via **HTTP** — sem SSH tunnel, sem acesso direto ao banco.
 
 ```
 Máquina remota                         Servidor principal
@@ -22,31 +22,32 @@ Máquina remota                         Servidor principal
 └─────────────────────────┘
 ```
 
+A imagem é puxada do registry privado `docker.easydoor.ai` — não é necessário
+clonar nenhum repositório de código além do `ed-infra`.
+
 ## Pré-requisitos
 
 - Docker instalado na máquina remota
-- Acesso SSH ao servidor principal (para o deploy)
-- Repositórios clonados lado a lado:
-
-```
-~/easydoor/
-├── ed-infra/        ← orquestra o build
-├── ed-worker/       ← código do worker
-└── ed-raspadinha/   ← lib de scraping (necessária para o build da imagem)
-```
+- Acesso SSH ao servidor principal (para deploy a partir do PC)
 
 ## Instalação
 
-### 1. Clonar os repositórios
+### 1. Clonar apenas o ed-infra
 
 ```bash
 mkdir -p ~/easydoor && cd ~/easydoor
 git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
-git clone git@git.easydoor.ai:EasyDoor/ed-worker.git
-git clone git@git.easydoor.ai:EasyDoor/ed-raspadinha.git
 ```
 
-### 2. Configurar as variáveis de ambiente
+### 2. Autenticar no registry (uma vez)
+
+```bash
+docker login docker.easydoor.ai
+# usuário: ismael
+# senha: ver MEMORY.md
+```
+
+### 3. Configurar as variáveis de ambiente
 
 ```bash
 cd ed-infra
@@ -57,59 +58,61 @@ cp .env.worker.example .env.worker
 `.env.worker`:
 ```env
 API_URL=https://api.easydoor.ai   # ou http://<IP-DO-PC>:8000 para rede local
-API_TOKEN=<token-de-autenticacao>
 WORKER_API_KEY=<chave-segura>
 WORKER_MAX_TOTAL=2
 WORKER_HEADLESS=1
 ```
 
-### 3. Buildar e subir
-
-O build baixa o Firefox (~500 MB) — só precisa rodar uma vez:
+### 4. Subir
 
 ```bash
-make worker-build
 make worker-up
 make worker-logs
 ```
+
+O Docker puxa a imagem `ed-worker:latest` do registry automaticamente (~1 GB na primeira vez).
 
 ## Operação diária
 
 ```bash
 make worker-up       # Sobe o worker
 make worker-down     # Para o worker
-make worker-restart  # Reinicia sem rebuild
+make worker-restart  # Reinicia sem atualizar
 make worker-logs     # Acompanha logs em tempo real
 ```
 
 ## Atualizar após deploy do servidor
 
 Quando o servidor é atualizado, o worker recebe `409 Conflict` e para automaticamente.
-Para atualizar, a partir do **PC principal**:
+Para atualizar a partir do **PC principal**:
 
 ```bash
-# Atualiza um worker remoto específico via SSH (pull + restart)
-cd ../ed-worker
-make update HOST=nome-do-host
+make notebook-deploy
 ```
 
-Ou manualmente na máquina remota:
-
+O que esse target faz via SSH:
 ```bash
 cd ~/easydoor/ed-infra
-git pull --rebase gitea master
-cd ../ed-worker && git pull --rebase gitea master
-cd ../ed-raspadinha && git pull --rebase gitea master
-cd ../ed-infra && make worker-rebuild
+git pull gitea master          # atualiza o compose file
+docker compose pull            # baixa a nova imagem do registry
+docker compose up -d --force-recreate
+```
+
+Ou manualmente no notebook:
+```bash
+cd ~/easydoor/ed-infra
+git pull gitea master
+make worker-up
 ```
 
 ## Sincronização de versão
 
-O worker tem `WORKER_VERSION` tatuada na imagem no momento do build (hash do git de `ed-infra`). Se a versão do worker divergir do servidor após um deploy:
+O worker tem `WORKER_VERSION` tatuada na imagem no momento do build (hash do git de `ed-infra`).
+Se a versão do worker divergir do servidor após um deploy:
 
-1. O servidor rejeita o worker com `409 Conflict`
+1. O servidor rejeita com `409 Conflict`
 2. O worker loga `[WARN] Worker desatualizado...` e para o polling
-3. O processo encerra limpo — o container reinicia automaticamente (via `restart: unless-stopped`) e volta a tentar conectar
+3. O container reinicia automaticamente (`restart: unless-stopped`) e volta a tentar
 
 Para ver a versão atual:
 ```bash
@@ -117,8 +120,6 @@ docker inspect easydoor-worker | grep WORKER_VERSION
 ```
 
 ## Testes
-
-### Testar se o Firefox raspa corretamente
 
 ```bash
 make worker-test robo=vivareal logradouro="Rua Maria Müller Gieseler" bairro="Velha" localidade="Blumenau" uf=SC
@@ -129,7 +130,6 @@ Se retornar uma lista de anúncios em JSON, o Firefox e a conexão com a API est
 ## Ajuste de paralelismo
 
 `WORKER_MAX_TOTAL` controla quantos Firefoxs rodam simultaneamente no container.
-Ajustar conforme a capacidade da máquina:
 
 | RAM disponível | WORKER_MAX_TOTAL recomendado |
 |---|---|
@@ -138,7 +138,6 @@ Ajustar conforme a capacidade da máquina:
 | 16 GB | 5–8 |
 
 Após alterar `.env.worker`, recriar o container:
-
 ```bash
 make worker-restart
 ```
@@ -147,19 +146,17 @@ make worker-restart
 
 ### Worker para logo após subir
 
-Verificar os logs:
 ```bash
 make worker-logs
 ```
 
-- `[WARN] Worker desatualizado` → versão desatualizada, rode `make worker-rebuild`
-- `Erro: variável de ambiente WORKER_VERSION é obrigatória` → imagem buildada sem o build arg; rode `make worker-rebuild`
+- `[WARN] Worker desatualizado` → versão desatualizada, rode `make notebook-deploy` do PC
 - Erro de conexão HTTP → verificar `API_URL` e `WORKER_API_KEY` no `.env.worker`
 
 ### Firefox trava ou não abre
 
-Verificar se o container tem memória compartilhada suficiente:
 ```bash
 docker exec easydoor-worker df -h /dev/shm
 ```
+
 Deve mostrar `2.0G`. Se não mostrar, o `shm_size: 2gb` não está sendo aplicado.
