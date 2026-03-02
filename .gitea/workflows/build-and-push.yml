@@ -22,11 +22,11 @@ jobs:
         run: |
           BASE_URL="https://deploy:${TOKEN}@git.easydoor.ai/EasyDoor"
           for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            git clone "${BASE_URL}/${repo}.git" "$GITHUB_WORKSPACE/../${repo}" || true
+            git clone "${BASE_URL}/${repo}.git" "$WORKSPACE/../${repo}" || true
           done
 
       - name: Copiar .dockerignore para o diretório pai
-        run: cp -f $GITHUB_WORKSPACE/.dockerignore $GITHUB_WORKSPACE/../
+        run: cp -f $WORKSPACE/.dockerignore $WORKSPACE/../
 
       - name: Login no Docker Registry
         uses: docker/login-action@v3
@@ -39,7 +39,7 @@ jobs:
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
         run: |
-          cd $GITHUB_WORKSPACE
+          cd $WORKSPACE
           docker compose build
 
       - name: Tag e Push — serviços versionados
