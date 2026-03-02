@@ -88,17 +88,7 @@ jobs:
           docker compose pull
           docker compose up -d --no-build --remove-orphans
 
-      # 9. Rebuild completo via Makefile
-      - name: Rebuild e subir serviços via Make
-        working-directory: ed-infra
-        env:
-          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-        run: |
-          make rebuild up
-          make worker-rebuild worker-up
-
-
-      # 10. Aplicar migrations do banco
+      # 9. Aplicar migrations do banco
       - name: Aplicar migrations do banco
         working-directory: ed-engine
         run: |
@@ -107,7 +97,7 @@ jobs:
           PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
           ./migrate.sh migrate
 
-      # 11. Limpar imagens antigas do builder
+      # 10. Limpar imagens antigas do builder
       - name: Cleanup Docker automático
         if: always()
         run: |
