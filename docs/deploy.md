@@ -43,8 +43,7 @@ make build-push
 
 Esse target faz dois passos em sequência:
 
-1. `make build` — builda com o overlay `docker-compose.build.yml`, tatuando
-   `APP_VERSION=$(git rev-parse --short HEAD)` nas imagens
+1. `make build` — builda todas as imagens tatuando `APP_VERSION=$(git rev-parse --short HEAD)`
 2. `make push` — faz tag `:latest` + push de cada imagem para `docker.easydoor.ai/easydoor/`
 
 **Só buildar** (sem push):
@@ -109,7 +108,7 @@ echo 'SENHA' | docker login docker.easydoor.ai -u ismael --password-stdin
 make up
 ```
 
-A partir daí, deploys futuros são apenas `make prd-deploy PRD_HOST=...`.
+A partir daí, deploys futuros seguem o fluxo da seção acima (build-push + pull no servidor).
 
 ---
 
@@ -137,16 +136,13 @@ Secrets necessários no Gitea (`ed-infra` > Settings > Actions > Secrets):
 
 ## Dev local (sem registry)
 
-Para desenvolvimento, use o overlay de build diretamente — sem precisar do registry:
+Para desenvolvimento local, use o `make rebuild` em vez de `make up`:
 
 ```bash
-make build       # builda localmente com docker-compose.build.yml
-make rebuild     # builda + recria containers
-make up          # sobe (puxa do registry — requer login)
+make build       # builda as imagens localmente
+make rebuild     # builda + recria os containers (sem precisar do registry)
 ```
 
-Para subir com imagens buildadas localmente em vez do registry, use o overlay:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
-```
+> **Atenção:** `make up` tenta puxar a imagem com tag `:<hash-do-git-local>` do registry.
+> Se você fez commits locais sem dar `make push`, o Docker não vai encontrar essa tag e vai falhar.
+> Use `make rebuild` para dev local, ou `make up` só após `make build-push`.
