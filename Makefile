@@ -22,20 +22,15 @@ help:
 	@echo "    dev-down           Para o banco de dev"
 	@echo "    dev-psql           Abre shell psql no banco de dev"
 	@echo ""
-	@echo "  Infra principal (PRD local)"
-	@echo "    up                 Sobe todos os containers e garante o banco criado"
+	@echo "  Infra local"
+	@echo "    up                 Sobe todos os containers e garante os bancos criados"
 	@echo "    down               Para todos os containers"
-	@echo "    build              Reconstrói todas as imagens"
-	@echo "    rebuild            Reconstrói imagens e recria containers"
 	@echo "    logs               Acompanha logs em tempo real"
 	@echo "    psql               Abre shell psql no banco"
 	@echo "    restart-<serviço>  Reinicia um serviço (ex: make restart-db)"
-	@echo "    db-keycloak        Cria o banco 'keycloak' se não existir"
 	@echo "    nuke               ⚠  Destrói tudo — containers + dados + logs"
 	@echo ""
 	@echo "  Worker remoto  (docker-compose.worker.yml + .env.worker)"
-	@echo "    worker-build       Builda a imagem do worker (inclui Firefox)"
-	@echo "    worker-rebuild     Builda e recria o container do worker"
 	@echo "    worker-up          Sobe o worker"
 	@echo "    worker-down        Para o worker"
 	@echo "    worker-restart     Reinicia o worker sem rebuild"
@@ -43,9 +38,13 @@ help:
 	@echo "    worker-test        Testa o Firefox dentro do container"
 	@echo "                       Ex: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"
 	@echo ""
-	@echo "  Registry (docker.easydoor.ai)"
+	@echo "  Build e Registry (docker.easydoor.ai)"
+	@echo "    build              Builda todas as imagens"
+	@echo "    rebuild            Builda e recria os containers"
 	@echo "    push               Envia imagens buildadas para o registry"
 	@echo "    build-push         Builda e envia todas as imagens"
+	@echo "    worker-build       Builda a imagem do worker"
+	@echo "    worker-rebuild     Builda e recria o container do worker"
 	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
@@ -75,12 +74,11 @@ dev-down:
 dev-psql:
 	PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d easydoor
 
-# ─── Infra principal (PRD local) ──────────────────────────────────────────────
+# ─── Infra local ──────────────────────────────────────────────────────────────
 
 up:
 	mkdir -p postgres_logs audit_logs data
 	chmod 777 postgres_logs audit_logs data
-	docker network prune -f
 	docker compose up -d --remove-orphans --force-recreate
 	@echo "Aguardando PostgreSQL aceitar conexões TCP..."
 	@until PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
@@ -94,26 +92,8 @@ up:
 		-c "CREATE DATABASE keycloak OWNER easydoor;"
 	@echo "Bancos prontos (easydoor + keycloak)."
 
-db-keycloak:
-	@PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres -tc \
-		"SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 || \
-		PGPASSWORD=easydoor psql -h localhost -p 5434 -U easydoor -d postgres \
-		-c "CREATE DATABASE keycloak OWNER easydoor;"
-	@echo "Banco keycloak pronto."
-
 down:
 	docker compose down
-
-build:
-	cp -f .dockerignore ../
-	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	$(BUILD_COMPOSE) build
-
-rebuild:
-	cp -f .dockerignore ../
-	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	$(BUILD_COMPOSE) build
-	docker compose up -d --force-recreate
 
 logs:
 	docker compose logs -f
@@ -129,17 +109,6 @@ restart-%:
 # Ver docs/worker-remoto.md para instruções completas.
 
 WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
-
-worker-build:
-	cp -f .dockerignore ../
-	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_BUILD_COMPOSE) build
-
-worker-rebuild:
-	cp -f .dockerignore ../
-	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_BUILD_COMPOSE) build
-	$(WORKER_COMPOSE) up -d --force-recreate
 
 worker-up:
 	$(WORKER_COMPOSE) up -d
@@ -169,7 +138,18 @@ worker-test:
 		$(if $(uf),uf="$(uf)") \
 		$(if $(cep),cep="$(cep)")
 
-# ─── Registry ──────────────────────────────────────────────────────────────
+# ─── Build e Registry ──────────────────────────────────────────────────────
+
+build:
+	cp -f .dockerignore ../
+	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
+	$(BUILD_COMPOSE) build
+
+rebuild:
+	cp -f .dockerignore ../
+	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
+	$(BUILD_COMPOSE) build
+	docker compose up -d --force-recreate
 
 push:
 	@echo "Push de imagens para $(REGISTRY) com tag $(APP_VERSION)..."
@@ -181,6 +161,17 @@ push:
 	@for svc in $(SERVICES_STABLE); do \
 		docker push $(REGISTRY)/$$svc:latest; \
 	done
+
+worker-build:
+	cp -f .dockerignore ../
+	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
+	$(WORKER_BUILD_COMPOSE) build
+
+worker-rebuild:
+	cp -f .dockerignore ../
+	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
+	$(WORKER_BUILD_COMPOSE) build
+	$(WORKER_COMPOSE) up -d --force-recreate
 
 build-push: build push
 
