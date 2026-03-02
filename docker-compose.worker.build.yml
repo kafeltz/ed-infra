@@ -1,9 +1,0 @@
-# docker-compose.worker.build.yml — overlay de build para o worker
-# Uso: docker compose -f docker-compose.worker.yml -f docker-compose.worker.build.yml build
-services:
-  ed-worker:
-    build:
-      context: ../
-      dockerfile: ed-infra/worker/Dockerfile
-      args:
-        WORKER_VERSION: ${APP_VERSION:-dev}

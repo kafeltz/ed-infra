@@ -2,6 +2,8 @@ services:
 
   db:
     image: docker.easydoor.ai/easydoor/ed-postgres:latest
+    build:
+      context: ./postgres
     container_name: easydoor-db
     restart: unless-stopped
     ports:
@@ -40,6 +42,8 @@ services:
 
   keycloak:
     image: docker.easydoor.ai/easydoor/ed-keycloak:latest
+    build:
+      context: ./keycloak
     container_name: easydoor-keycloak
     restart: unless-stopped
     ports:
@@ -71,6 +75,11 @@ services:
 
   ed-backend-api:
     image: docker.easydoor.ai/easydoor/ed-backend-api:${APP_VERSION:-latest}
+    build:
+      context: ../ed-backend-api
+      dockerfile: ../ed-infra/backend/Dockerfile
+      args:
+        SERVER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-backend-api
     restart: unless-stopped
     ports:
@@ -97,6 +106,11 @@ services:
 
   ed-worker:
     image: docker.easydoor.ai/easydoor/ed-worker:${APP_VERSION:-latest}
+    build:
+      context: ../
+      dockerfile: ed-infra/worker/Dockerfile
+      args:
+        WORKER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-worker
     restart: unless-stopped
     shm_size: 2gb
@@ -116,6 +130,9 @@ services:
 
   ed-geocoder:
     image: docker.easydoor.ai/easydoor/ed-geocoder:${APP_VERSION:-latest}
+    build:
+      context: ../
+      dockerfile: ed-infra/geocoder/Dockerfile
     container_name: easydoor-geocoder
     restart: unless-stopped
     environment:
@@ -128,6 +145,9 @@ services:
 
   ed-watchdog:
     image: docker.easydoor.ai/easydoor/ed-watchdog:${APP_VERSION:-latest}
+    build:
+      context: ../
+      dockerfile: ed-infra/watchdog/Dockerfile
     container_name: easydoor-watchdog
     restart: unless-stopped
     env_file:
@@ -156,6 +176,14 @@ services:
 
   ed-frontend-app:
     image: docker.easydoor.ai/easydoor/ed-frontend-app:${APP_VERSION:-latest}
+    build:
+      context: ../ed-frontend-app
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4175"
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-easydoor}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-easydoor-frontend}
     container_name: easydoor-frontend
     restart: unless-stopped
     environment:
@@ -163,6 +191,11 @@ services:
 
   ed-admin:
     image: docker.easydoor.ai/easydoor/ed-admin:${APP_VERSION:-latest}
+    build:
+      context: ../ed-admin
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4176"
     container_name: easydoor-ed-admin
     restart: unless-stopped
     environment:
@@ -170,6 +203,11 @@ services:
 
   ed-calibrador:
     image: docker.easydoor.ai/easydoor/ed-calibrador:${APP_VERSION:-latest}
+    build:
+      context: ../ed-calibrador
+      dockerfile: ../ed-infra/frontend/Dockerfile
+      args:
+        PORT: "4174"
     container_name: easydoor-ed-calibrador
     restart: unless-stopped
     environment:

@@ -5,9 +5,6 @@
 APP_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export APP_VERSION
 
-BUILD_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.build.yml
-WORKER_BUILD_COMPOSE := docker compose -f docker-compose.worker.yml -f docker-compose.worker.build.yml
-
 REGISTRY := docker.easydoor.ai/easydoor
 SERVICES_VERSIONED := ed-backend-api ed-worker ed-geocoder ed-watchdog \
                       ed-frontend-app ed-admin ed-calibrador
@@ -143,12 +140,12 @@ worker-test:
 build:
 	cp -f .dockerignore ../
 	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	$(BUILD_COMPOSE) build
+	docker compose build
 
 rebuild:
 	cp -f .dockerignore ../
 	@echo "Buildando com APP_VERSION=$(APP_VERSION)"
-	$(BUILD_COMPOSE) build
+	docker compose build
 	docker compose up -d --force-recreate
 
 push:
@@ -165,12 +162,12 @@ push:
 worker-build:
 	cp -f .dockerignore ../
 	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_BUILD_COMPOSE) build
+	$(WORKER_COMPOSE) build
 
 worker-rebuild:
 	cp -f .dockerignore ../
 	@echo "Buildando worker com APP_VERSION=$(APP_VERSION)"
-	$(WORKER_BUILD_COMPOSE) build
+	$(WORKER_COMPOSE) build
 	$(WORKER_COMPOSE) up -d --force-recreate
 
 build-push: build push

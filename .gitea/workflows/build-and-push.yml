@@ -41,7 +41,7 @@ jobs:
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.build.yml build
+          docker compose build
 
       - name: Tag e Push — serviços versionados
         env:
