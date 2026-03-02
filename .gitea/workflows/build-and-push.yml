@@ -20,9 +20,9 @@ jobs:
 
       - name: Clonar repos irmãos
         env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          TOKEN: ${{ secrets.TOKEN }}
         run: |
-          BASE_URL="https://ismael.santos:${GITEA_TOKEN}@git.easydoor.ai/EasyDoor"
+          BASE_URL="https://deploy:${TOKEN}@git.easydoor.ai/EasyDoor"
           for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             git clone "${BASE_URL}/${repo}.git" "../${repo}" || true
           done
@@ -61,3 +61,10 @@ jobs:
           for svc in ed-postgres ed-keycloak; do
             docker push ${REGISTRY}/${svc}:latest
           done
+
+      - name: Deploy no servidor
+        run: |
+          cd /opt/easydoor-stack-stage/ed-infra
+          git pull gitea master
+          docker compose pull
+          docker compose up -d --no-build --remove-orphans
