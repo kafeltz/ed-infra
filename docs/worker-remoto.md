@@ -28,7 +28,6 @@ clonar nenhum repositório de código além do `ed-infra`.
 ## Pré-requisitos
 
 - Docker instalado na máquina remota
-- Acesso SSH ao servidor principal (para deploy a partir do PC)
 
 ## Instalação
 
@@ -84,25 +83,12 @@ make worker-logs     # Acompanha logs em tempo real
 ## Atualizar após deploy do servidor
 
 Quando o servidor é atualizado, o worker recebe `409 Conflict` e para automaticamente.
-Para atualizar a partir do **PC principal**:
+Para atualizar, na máquina que roda o worker:
 
-```bash
-make notebook-deploy
-```
-
-O que esse target faz via SSH:
 ```bash
 cd ~/easydoor/ed-infra
-git pull gitea master          # atualiza o compose file
-docker compose pull            # baixa a nova imagem do registry
-docker compose up -d --force-recreate
-```
-
-Ou manualmente no notebook:
-```bash
-cd ~/easydoor/ed-infra
-git pull gitea master
-make worker-up
+git pull gitea master   # atualiza o compose file
+make worker-up          # pull da nova imagem + recria o container
 ```
 
 ## Sincronização de versão
@@ -150,7 +136,7 @@ make worker-restart
 make worker-logs
 ```
 
-- `[WARN] Worker desatualizado` → versão desatualizada, rode `make notebook-deploy` do PC
+- `[WARN] Worker desatualizado` → versão desatualizada, rode `git pull gitea master && make worker-up` na máquina do worker
 - Erro de conexão HTTP → verificar `API_URL` e `WORKER_API_KEY` no `.env.worker`
 
 ### Firefox trava ou não abre
