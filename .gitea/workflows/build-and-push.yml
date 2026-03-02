@@ -25,24 +25,17 @@ jobs:
         working-directory: ed-infra
         run: echo "APP_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      # 3. Clonar repos irmãos no mesmo nível do ed-infra
+      # 3. Clonar repos irmãos
       - name: Clonar repos irmãos
         env:
           TOKEN: ${{ secrets.TOKEN }}
         run: |
           BASE_URL="https://deploy:${TOKEN}@git.easydoor.ai/EasyDoor"
-
           cd $GITHUB_WORKSPACE
 
           for repo in ed-backend-api ed-worker ed-raspadinha ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador ed-engine; do
             git clone "${BASE_URL}/${repo}.git" "${repo}" || true
           done
-
-      # DEBUG opcional
-      - name: Debug estrutura
-        run: |
-          ls -lah
-          ls -lah ed-infra
 
       # 4. Login no registry
       - name: Login no Docker Registry
@@ -52,7 +45,7 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 5. Build usando o docker-compose dentro do ed-infra
+      # 5. Build das imagens
       - name: Build das imagens
         working-directory: ed-infra
         env:
@@ -66,38 +59,40 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
           REGISTRY: docker.easydoor.ai/easydoor
         run: |
-          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador ed-engine; do
             docker tag ${REGISTRY}/${svc}:${APP_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
             docker push ${REGISTRY}/${svc}:${APP_VERSION}
             docker push ${REGISTRY}/${svc}:latest
           done
 
       # 7. Push serviços estáveis
-      - name: Tag e Push — serviços estáveis
+      - name: Push serviços estáveis
         env:
           REGISTRY: docker.easydoor.ai/easydoor
         run: |
           docker push ${REGISTRY}/ed-postgres:latest
           docker push ${REGISTRY}/ed-keycloak:latest
 
-      # 8. Deploy
-      - name: Deploy no servidor
+      # 8. Deploy + Rebuild no servidor
+      - name: Deploy completo no servidor
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
           git pull
           docker compose pull
           docker compose up -d --no-build --remove-orphans
+          make rebuild up
+          make worker-rebuild worker-up
 
-      # 9. Aplicar migrations do banco
+      # 9. Aplicar migrations do banco (no servidor)
       - name: Aplicar migrations do banco
-        working-directory: ed-engine
         run: |
+          cd /opt/easydoor-stack-stage/ed-engine
           source /opt/easydoor-stack-stage/ed-infra/.env
           PGPASSWORD="${POSTGRES_PASSWORD}" \
           PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
           ./migrate.sh migrate
 
-      # 10. Limpar imagens antigas do builder
+      # 10. Cleanup Docker
       - name: Cleanup Docker automático
         if: always()
         run: |
