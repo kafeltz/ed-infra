@@ -96,7 +96,14 @@ jobs:
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
           git pull
-          docker compose pull
+          
+          # Pull com retry
+          for i in 1 2 3; do
+            docker compose pull && break
+            echo "Pull falhou, tentativa $i/3..."
+            sleep 10
+          done
+          
           docker compose up -d --no-build --remove-orphans
           make rebuild up
           make worker-rebuild worker-up
