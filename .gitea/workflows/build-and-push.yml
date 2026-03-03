@@ -68,7 +68,10 @@ jobs:
 
             echo "🔨 Building ${svc}:${APP_VERSION}"
             APP_VERSION=$APP_VERSION docker compose build $svc
-            docker tag ${REGISTRY}/${svc}:latest $IMAGE
+            # Não fazer docker tag :latest → $IMAGE aqui: o compose build já
+            # cria $IMAGE diretamente (image: .../${svc}:${APP_VERSION}).
+            # Fazer o tag sobrescreveria a imagem recém-buildada com a antiga
+            # (:latest vem do cache_from e tem WORKER_VERSION desatualizado).
           done
 
       # 6️⃣ Push apenas se imagem existir localmente
