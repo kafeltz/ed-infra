@@ -64,7 +64,7 @@ jobs:
           done
 
       # 6. Push versionados
-      - name: Tag e Push — serviços versionados
+      name: Tag e Push — serviços versionados
         working-directory: ed-infra
         env:
           REGISTRY: docker.easydoor.ai/easydoor
@@ -74,15 +74,31 @@ jobs:
             
             if docker manifest inspect ${REGISTRY}/${svc}:${SVC_VERSION} > /dev/null 2>&1; then
               echo "✅ ${svc}:${SVC_VERSION} já existe, atualizando apenas latest..."
-              docker pull ${REGISTRY}/${svc}:${SVC_VERSION}
+              for i in 1 2 3; do
+                docker pull ${REGISTRY}/${svc}:${SVC_VERSION} && break
+                echo "⚠️ Pull falhou, tentativa $i/3..."
+                sleep 10
+              done
               docker tag ${REGISTRY}/${svc}:${SVC_VERSION} ${REGISTRY}/${svc}:latest
-              docker push ${REGISTRY}/${svc}:latest
+              for i in 1 2 3; do
+                docker push ${REGISTRY}/${svc}:latest && break
+                echo "⚠️ Push latest falhou, tentativa $i/3..."
+                sleep 10
+              done
               continue
             fi
             
             docker tag ${REGISTRY}/${svc}:${SVC_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
-            docker push ${REGISTRY}/${svc}:${SVC_VERSION}
-            docker push ${REGISTRY}/${svc}:latest
+            for i in 1 2 3; do
+              docker push ${REGISTRY}/${svc}:${SVC_VERSION} && break
+              echo "⚠️ Push versionado falhou, tentativa $i/3..."
+              sleep 10
+            done
+            for i in 1 2 3; do
+              docker push ${REGISTRY}/${svc}:latest && break
+              echo "⚠️ Push latest falhou, tentativa $i/3..."
+              sleep 10
+            done
           done
 
       # 7. Push serviços estáveis
