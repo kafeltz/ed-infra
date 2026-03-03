@@ -126,7 +126,6 @@ jobs:
 
       # 9️⃣ Aplicar migrations
       - name: Aplicar migrations do banco
-        if: ${{ !env.ACT }}
         run: |
           cd /opt/easydoor-stack-stage/ed-engine
           source /opt/easydoor-stack-stage/ed-infra/.env
