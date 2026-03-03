@@ -1,12 +1,15 @@
 # Override para ambiente de desenvolvimento local.
 # Sobe banco + Keycloak para dev local (backend e frontend rodam fora do Docker).
+# Usa nomes e portas distintos para coexistir com o ambiente de produção local.
 # Uso: make dev-up
 
 services:
   db:
+    container_name: easydoor-db-dev
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
 
   keycloak:
+    container_name: easydoor-keycloak-dev
     ports:
       - "127.0.0.1:10082:8080"
