@@ -64,7 +64,7 @@ jobs:
           done
 
       # 6. Push versionados
-      name: Tag e Push — serviços versionados
+      - name: Tag e Push — serviços versionados
         working-directory: ed-infra
         env:
           REGISTRY: docker.easydoor.ai/easydoor
