@@ -49,7 +49,14 @@ jobs:
         working-directory: ed-infra
         env:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-        run: docker compose build
+        run: |
+          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+            cd $GITHUB_WORKSPACE/$svc
+            LAST_COMMIT=$(git rev-parse --short HEAD)
+            REMOTE_TAG=$(docker manifest inspect docker.easydoor.ai/easydoor/${svc}:latest 2>/dev/null | grep -o '"digest":"sha256:[^"]*"' | head -1)
+            cd $GITHUB_WORKSPACE/ed-infra
+            docker compose build $svc
+          done
 
       # 6. Push versionados
       - name: Tag e Push — serviços versionados
@@ -97,6 +104,6 @@ jobs:
       - name: Cleanup Docker automático
         if: always()
         run: |
-          docker builder prune -af || true
-          docker image prune -af || true
+          docker builder prune -f || true
+          docker image prune -f || true
           docker container prune -f || true
