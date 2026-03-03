@@ -71,6 +71,13 @@ jobs:
         run: |
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
+            
+            # Se já existe no registry, pula
+            if docker manifest inspect ${REGISTRY}/${svc}:${SVC_VERSION} > /dev/null 2>&1; then
+              echo "✅ ${svc}:${SVC_VERSION} já existe no registry, pulando push"
+              continue
+            fi
+            
             docker tag ${REGISTRY}/${svc}:${SVC_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
             docker push ${REGISTRY}/${svc}:${SVC_VERSION}
             docker push ${REGISTRY}/${svc}:latest
