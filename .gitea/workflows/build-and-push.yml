@@ -98,14 +98,26 @@ jobs:
           git pull
           
           # Pull individual com retry para cada serviço
-          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador ed-keycloak ed-postgres; do
+          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador keycloak db; do
             for i in 1 2 3; do
               docker compose pull $svc && break
               echo "⚠️ Pull do $svc falhou, tentativa $i/3..."
-              docker rmi docker.easydoor.ai/easydoor/${svc}:latest 2>/dev/null || true
               sleep 5
             done
           done
+
+          # Garante as imagens via docker pull direto
+          for img in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
+            for i in 1 2 3; do
+              docker pull docker.easydoor.ai/easydoor/${img}:latest && break
+              echo "⚠️ docker pull ${img} falhou, tentativa $i/3..."
+              sleep 5
+            done
+          done
+          
+          docker compose up -d --no-build --remove-orphans
+          make rebuild up
+          make worker-rebuild worker-up
           
           docker compose up -d --no-build --remove-orphans
           make rebuild up
