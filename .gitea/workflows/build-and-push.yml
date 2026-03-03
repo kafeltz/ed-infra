@@ -47,9 +47,19 @@ jobs:
       # 5. Build das imagens
       - name: Build das imagens
         working-directory: ed-infra
+        env:
+          REGISTRY: docker.easydoor.ai/easydoor
         run: |
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
+            
+            # Verifica se a tag já existe no registry
+            if docker manifest inspect ${REGISTRY}/${svc}:${SVC_VERSION} > /dev/null 2>&1; then
+              echo "✅ ${svc}:${SVC_VERSION} já existe no registry, pulando build"
+              continue
+            fi
+            
+            echo "🔨 Building ${svc}:${SVC_VERSION}"
             APP_VERSION=$SVC_VERSION docker compose build $svc
           done
 
