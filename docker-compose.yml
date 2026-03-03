@@ -4,6 +4,8 @@ services:
     image: docker.easydoor.ai/easydoor/ed-postgres:latest
     build:
       context: ./postgres
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-postgres:latest
     container_name: easydoor-db
     restart: unless-stopped
     ports:
@@ -44,6 +46,8 @@ services:
     image: docker.easydoor.ai/easydoor/ed-keycloak:latest
     build:
       context: ./keycloak
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-keycloak:latest
     container_name: easydoor-keycloak
     restart: unless-stopped
     ports:
@@ -78,6 +82,8 @@ services:
     build:
       context: ../ed-backend-api
       dockerfile: ../ed-infra/backend/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-backend-api:latest
       args:
         SERVER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-backend-api
@@ -109,6 +115,8 @@ services:
     build:
       context: ../
       dockerfile: ed-infra/worker/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-worker:latest
       args:
         WORKER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-worker
@@ -133,6 +141,8 @@ services:
     build:
       context: ../
       dockerfile: ed-infra/geocoder/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-geocoder:latest
     container_name: easydoor-geocoder
     restart: unless-stopped
     environment:
@@ -148,6 +158,8 @@ services:
     build:
       context: ../
       dockerfile: ed-infra/watchdog/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-watchdog:latest
     container_name: easydoor-watchdog
     restart: unless-stopped
     env_file:
@@ -179,6 +191,8 @@ services:
     build:
       context: ../ed-frontend-app
       dockerfile: ../ed-infra/frontend/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-frontend-app:latest
       args:
         PORT: "4175"
         VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
@@ -194,6 +208,8 @@ services:
     build:
       context: ../ed-admin
       dockerfile: ../ed-infra/frontend/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-admin:latest
       args:
         PORT: "4176"
     container_name: easydoor-ed-admin
@@ -206,6 +222,8 @@ services:
     build:
       context: ../ed-calibrador
       dockerfile: ../ed-infra/frontend/Dockerfile
+      cache_from:
+        - docker.easydoor.ai/easydoor/ed-calibrador:latest
       args:
         PORT: "4174"
     container_name: easydoor-ed-calibrador
