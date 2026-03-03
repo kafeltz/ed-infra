@@ -22,8 +22,12 @@ Máquina remota                         Servidor principal
 └─────────────────────────┘
 ```
 
-A imagem é puxada do registry privado `docker.easydoor.ai` — não é necessário
-clonar nenhum repositório de código além do `ed-infra`.
+A imagem é puxada do registry privado `docker.easydoor.ai` — **em máquinas AMD64**. Em máquinas **ARM64** (ex: kafeltz, Raspberry Pi), a imagem não existe no registry e é buildada localmente. O `make worker-up` detecta a arquitetura automaticamente.
+
+| Arquitetura | Estratégia | Repos necessários |
+|---|---|---|
+| AMD64 (x86_64) | Puxa `:latest` do registry | só `ed-infra` |
+| ARM64 (aarch64) | Builda localmente | `ed-infra` + `ed-worker` + `ed-raspadinha` |
 
 ## Pré-requisitos
 
@@ -31,11 +35,20 @@ clonar nenhum repositório de código além do `ed-infra`.
 
 ## Instalação
 
-### 1. Clonar apenas o ed-infra
+### 1. Clonar os repositórios
 
+**AMD64:**
 ```bash
 mkdir -p ~/easydoor && cd ~/easydoor
 git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
+```
+
+**ARM64:**
+```bash
+mkdir -p ~/easydoor && cd ~/easydoor
+git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
+git clone git@git.easydoor.ai:EasyDoor/ed-worker.git
+git clone git@git.easydoor.ai:EasyDoor/ed-raspadinha.git
 ```
 
 ### 2. Autenticar no registry (uma vez)
@@ -69,7 +82,8 @@ make worker-up
 make worker-logs
 ```
 
-O Docker puxa a imagem `ed-worker:latest` do registry automaticamente (~1 GB na primeira vez).
+**AMD64:** puxa a imagem `ed-worker:latest` do registry (~1 GB na primeira vez).
+**ARM64:** builda a imagem localmente (pode demorar alguns minutos na primeira vez).
 
 ## Operação diária
 
@@ -82,14 +96,30 @@ make worker-logs     # Acompanha logs em tempo real
 
 ## Atualizar após deploy do servidor
 
-Quando o servidor é atualizado, o worker recebe `409 Conflict` e para automaticamente.
-Para atualizar, na máquina que roda o worker:
+Quando o servidor é atualizado, o worker recebe `409 Conflict`, para o polling e o Docker o reinicia automaticamente. O container fica em loop até que uma nova versão seja instalada.
+
+Para atualizar manualmente:
 
 ```bash
 cd ~/easydoor/ed-infra
-git pull gitea master   # atualiza o compose file
-make worker-up          # pull da nova imagem + recria o container
+git pull gitea master   # AMD64: usa origin/gitea conforme o remote configurado
+make worker-up          # AMD64: pull do registry | ARM64: rebuild local
 ```
+
+### Autoupdate automático (cron)
+
+O script `scripts/worker-autoupdate.sh` detecta a arquitetura e atualiza automaticamente:
+
+- **AMD64**: faz `docker pull`, compara digest com o container em execução e recria se houver nova versão
+- **ARM64**: faz `git pull`, compara hash do `ed-infra` com a `WORKER_VERSION` do container e rebuilda se necessário
+
+Para instalar o cronjob (a cada 1 minuto):
+
+```bash
+make worker-autoupdate-install
+```
+
+Logs em `/tmp/worker-autoupdate.log`.
 
 ## Sincronização de versão
 
