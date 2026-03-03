@@ -15,7 +15,7 @@ help:
 	@echo "Infra EasyDoor"
 	@echo ""
 	@echo "  Desenvolvimento local"
-	@echo "    dev-up             Sobe apenas o banco (porta 5432) para dev local"
+	@echo "    dev-up             Sobe banco (5432) + Keycloak (10082) para dev local"
 	@echo "    dev-down           Para o banco de dev"
 	@echo "    dev-psql           Abre shell psql no banco de dev"
 	@echo ""
@@ -48,7 +48,7 @@ help:
 	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
-# Sobe apenas o banco na porta 5432 (padrão do Postgres).
+# Sobe banco (porta 5432) + Keycloak (porta 8082).
 # Backend e frontend rodam nativamente no Linux (sem Docker).
 
 DEV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
@@ -61,8 +61,17 @@ dev-up:
 	$(DEV_COMPOSE) up -d db
 	@echo "Aguardando PostgreSQL aceitar conexões..."
 	@until PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d easydoor -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
+	@PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d postgres -tc \
+		"SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 || \
+		PGPASSWORD=easydoor psql -h localhost -p 5432 -U easydoor -d postgres \
+		-c "CREATE DATABASE keycloak OWNER easydoor;"
+	$(DEV_COMPOSE) up -d keycloak
+	@echo "Aguardando Keycloak ficar pronto..."
+	@until curl -sf http://localhost:10082/health/ready >/dev/null 2>&1; do sleep 2; done
 	@echo ""
 	@echo "Banco pronto em localhost:5432"
+	@echo "Keycloak pronto em http://localhost:10082"
+	@echo "  Admin console: http://localhost:10082/admin  (admin / EasyDoor@2024)"
 	@echo ""
 	@echo "Agora rode em terminais separados:"
 	@echo "  cd ../ed-backend-api && make dev"

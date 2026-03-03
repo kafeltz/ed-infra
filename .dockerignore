@@ -2,7 +2,6 @@
 ask-the-intent/
 prototipo/
 tools/
-webook-gitea/
 
 # Diretórios pesados que nunca devem ir pro build context
 **/.git
