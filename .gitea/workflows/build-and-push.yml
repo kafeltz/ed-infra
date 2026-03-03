@@ -102,26 +102,26 @@ jobs:
           docker push ${REGISTRY}/ed-keycloak:latest || true
 
       # 8️⃣ Deploy no servidor 
-      - name: Deploy completo no servidor
-  run: |
-    cd /opt/easydoor-stack-stage/ed-infra
-    git pull
+       - name: Deploy completo no servidor
+        run: |
+          cd /opt/easydoor-stack-stage/ed-infra
+          git pull
 
-    echo "⬇️ Atualizando imagens"
-    for i in 1 2 3; do
-      docker compose pull && break
-      echo "⚠️ Pull falhou, tentativa $i/3..."
-      sleep 5
-    done
+          echo "⬇️ Atualizando imagens"
+          for i in 1 2 3; do
+            docker compose pull && break
+            echo "⚠️ Pull falhou, tentativa $i/3..."
+            sleep 5
+          done
 
-    echo "🚀 Subindo stack"
-    docker compose up -d --remove-orphans
+          echo "🚀 Subindo stack"
+          docker compose up -d --remove-orphans
 
-    echo "♻️ Rebuild aplicação"
-    make rebuild
-    make up
-    make worker-rebuild
-    make worker-up
+          echo "♻️ Rebuild aplicação"
+          make rebuild
+          make up
+          make worker-rebuild
+          make worker-up
 
 
       # 9️⃣ Aplicar migrations
