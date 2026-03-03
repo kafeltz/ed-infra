@@ -87,6 +87,8 @@ jobs:
         run: |
           cd /opt/easydoor-stack-stage/ed-engine
           source /opt/easydoor-stack-stage/ed-infra/.env
+          PGPASSWORD="${POSTGRES_PASSWORD}" psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB} \
+            -c "DROP FUNCTION IF EXISTS buscar_comparaveis(numeric, numeric, integer, text);"
           PGPASSWORD="${POSTGRES_PASSWORD}" \
           PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
           ./migrate.sh migrate
