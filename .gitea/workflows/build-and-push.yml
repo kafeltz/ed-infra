@@ -48,20 +48,26 @@ jobs:
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
       # 5️⃣ Build apenas se tag não existir
+      # IMPORTANTE: todos os serviços usam o hash do ed-infra (APP_VERSION) como
+      # versão — não o hash do próprio repo. O servidor (ed-backend-api) grava
+      # SERVER_VERSION=$APP_VERSION e rejeita workers com WORKER_VERSION diferente.
+      # Usar hashes distintos por repo quebra essa invariante e causa o erro:
+      # "[WARN] Worker desatualizado. Versão local: X, Servidor: Y"
+      # Ver issue #23.
       - name: Build das imagens
         working-directory: ed-infra
         run: |
+          APP_VERSION=${{ steps.version.outputs.APP_VERSION }}
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
-            IMAGE=${REGISTRY}/${svc}:${SVC_VERSION}
+            IMAGE=${REGISTRY}/${svc}:${APP_VERSION}
 
             if docker manifest inspect $IMAGE > /dev/null 2>&1; then
-              echo "✅ ${svc}:${SVC_VERSION} já existe no registry, pulando build"
+              echo "✅ ${svc}:${APP_VERSION} já existe no registry, pulando build"
               continue
             fi
 
-            echo "🔨 Building ${svc}:${SVC_VERSION}"
-            APP_VERSION=$SVC_VERSION docker compose build $svc
+            echo "🔨 Building ${svc}:${APP_VERSION}"
+            APP_VERSION=$APP_VERSION docker compose build $svc
             docker tag ${REGISTRY}/${svc}:latest $IMAGE
           done
 
@@ -69,13 +75,13 @@ jobs:
       - name: Push das imagens
         working-directory: ed-infra
         run: |
+          APP_VERSION=${{ steps.version.outputs.APP_VERSION }}
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
-            IMAGE_VERSION=${REGISTRY}/${svc}:${SVC_VERSION}
+            IMAGE_VERSION=${REGISTRY}/${svc}:${APP_VERSION}
             IMAGE_LATEST=${REGISTRY}/${svc}:latest
 
             if docker image inspect $IMAGE_VERSION > /dev/null 2>&1; then
-              echo "🚀 Push ${svc}:${SVC_VERSION}"
+              echo "🚀 Push ${svc}:${APP_VERSION}"
               
               for i in 1 2 3; do
                 docker push $IMAGE_VERSION && break
@@ -91,7 +97,7 @@ jobs:
                 sleep 5
               done
             else
-              echo "ℹ️ ${svc}:${SVC_VERSION} não foi buildado, nada para push"
+              echo "ℹ️ ${svc}:${APP_VERSION} não foi buildado, nada para push"
             fi
           done
 
