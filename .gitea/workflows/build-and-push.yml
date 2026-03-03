@@ -102,7 +102,7 @@ jobs:
           docker push ${REGISTRY}/ed-keycloak:latest || true
 
       # 8️⃣ Deploy no servidor 
-       - name: Deploy completo no servidor
+      - name: Deploy completo no servidor
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
           git pull
