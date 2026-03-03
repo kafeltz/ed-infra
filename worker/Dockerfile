@@ -44,7 +44,8 @@ RUN grep -v 'ed-raspadinha' requirements.txt > /tmp/reqs.txt && \
     pip install --no-cache-dir -r /tmp/reqs.txt
 
 # ── Camada 2: binário do Firefox (~500 MB, muda quase nunca) ────
-RUN python -m camoufox fetch
+# Fallback --no-mmdb caso o repositório GeoLite2 esteja indisponível (erro 500).
+RUN python -m camoufox fetch || python -m camoufox fetch --no-mmdb
 
 # ── Camada 3: código-fonte (muda frequentemente) ────────────────
 # Invalidar aqui NÃO rebaixa as camadas acima.
