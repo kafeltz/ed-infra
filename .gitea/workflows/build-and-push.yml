@@ -11,21 +11,24 @@ jobs:
   build-and-push:
     runs-on: [self-hosted, ubuntu-latest]
 
+    env:
+      REGISTRY: docker.easydoor.ai/easydoor
+
     steps:
 
-      # 1. Checkout do ed-infra dentro do workspace
+      # 1️⃣ Checkout infra
       - name: Checkout ed-infra
         uses: actions/checkout@v4
         with:
           path: ed-infra
 
-      # 2. Calcular versão
+      # 2️⃣ Calcular versão da infra
       - name: Calcular APP_VERSION
         id: version
         working-directory: ed-infra
         run: echo "APP_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      # 3. Clonar repos irmãos
+      # 3️⃣ Clonar repositórios irmãos
       - name: Clonar repos irmãos
         env:
           TOKEN: ${{ secrets.TOKEN }}
@@ -36,7 +39,7 @@ jobs:
             git clone "${BASE_URL}/${repo}.git" "${repo}" || true
           done
 
-      # 4. Login no registry
+      # 4️⃣ Login no registry
       - name: Login no Docker Registry
         uses: docker/login-action@v3
         with:
@@ -44,120 +47,106 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 5. Build das imagens
+      # 5️⃣ Build apenas se tag não existir
       - name: Build das imagens
         working-directory: ed-infra
-        env:
-          REGISTRY: docker.easydoor.ai/easydoor
         run: |
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
-            
-            # Verifica se a tag já existe no registry
-            if docker manifest inspect ${REGISTRY}/${svc}:${SVC_VERSION} > /dev/null 2>&1; then
+            IMAGE=${REGISTRY}/${svc}:${SVC_VERSION}
+
+            if docker manifest inspect $IMAGE > /dev/null 2>&1; then
               echo "✅ ${svc}:${SVC_VERSION} já existe no registry, pulando build"
               continue
             fi
-            
+
             echo "🔨 Building ${svc}:${SVC_VERSION}"
             APP_VERSION=$SVC_VERSION docker compose build $svc
+            docker tag ${REGISTRY}/${svc}:latest $IMAGE
           done
 
-      # 6. Push versionados
-      - name: Tag e Push — serviços versionados
+      # 6️⃣ Push apenas se imagem existir localmente
+      - name: Push das imagens
         working-directory: ed-infra
-        env:
-          REGISTRY: docker.easydoor.ai/easydoor
         run: |
           for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
             SVC_VERSION=$(git -C $GITHUB_WORKSPACE/$svc rev-parse --short HEAD)
-            
-            if docker manifest inspect ${REGISTRY}/${svc}:${SVC_VERSION} > /dev/null 2>&1; then
-              echo "✅ ${svc}:${SVC_VERSION} já existe, atualizando apenas latest..."
+            IMAGE_VERSION=${REGISTRY}/${svc}:${SVC_VERSION}
+            IMAGE_LATEST=${REGISTRY}/${svc}:latest
+
+            if docker image inspect $IMAGE_VERSION > /dev/null 2>&1; then
+              echo "🚀 Push ${svc}:${SVC_VERSION}"
+              
               for i in 1 2 3; do
-                docker pull ${REGISTRY}/${svc}:${SVC_VERSION} && break
-                echo "⚠️ Pull falhou, tentativa $i/3..."
-                sleep 10
+                docker push $IMAGE_VERSION && break
+                echo "⚠️ Push falhou, tentativa $i/3..."
+                sleep 5
               done
-              docker tag ${REGISTRY}/${svc}:${SVC_VERSION} ${REGISTRY}/${svc}:latest
+
+              docker tag $IMAGE_VERSION $IMAGE_LATEST
+
               for i in 1 2 3; do
-                docker push ${REGISTRY}/${svc}:latest && break
+                docker push $IMAGE_LATEST && break
                 echo "⚠️ Push latest falhou, tentativa $i/3..."
-                sleep 10
+                sleep 5
               done
-              continue
+            else
+              echo "ℹ️ ${svc}:${SVC_VERSION} não foi buildado, nada para push"
             fi
-            
-            docker tag ${REGISTRY}/${svc}:${SVC_VERSION} ${REGISTRY}/${svc}:latest 2>/dev/null || true
-            for i in 1 2 3; do
-              docker push ${REGISTRY}/${svc}:${SVC_VERSION} && break
-              echo "⚠️ Push versionado falhou, tentativa $i/3..."
-              sleep 10
-            done
-            for i in 1 2 3; do
-              docker push ${REGISTRY}/${svc}:latest && break
-              echo "⚠️ Push latest falhou, tentativa $i/3..."
-              sleep 10
-            done
           done
 
-      # 7. Push serviços estáveis
+      # 7️⃣ Push serviços estáveis
       - name: Push serviços estáveis
-        env:
-          REGISTRY: docker.easydoor.ai/easydoor
         run: |
-          docker push ${REGISTRY}/ed-postgres:latest
-          docker push ${REGISTRY}/ed-keycloak:latest
+          docker push ${REGISTRY}/ed-postgres:latest || true
+          docker push ${REGISTRY}/ed-keycloak:latest || true
 
-      # 8. Deploy + Rebuild no servidor
+      # 8️⃣ Deploy no servidor (NÃO roda via ACT)
       - name: Deploy completo no servidor
+        if: ${{ !env.ACT }}
         run: |
           cd /opt/easydoor-stack-stage/ed-infra
           git pull
-          
-          # Pull individual com retry para cada serviço
-          for svc in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador keycloak db; do
-            for i in 1 2 3; do
-              docker compose pull $svc && break
-              echo "⚠️ Pull do $svc falhou, tentativa $i/3..."
-              sleep 5
-            done
+
+          SERVICES="ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador"
+
+          for svc in $SERVICES; do
+            IMAGE=${REGISTRY}/${svc}:latest
+
+            if docker image inspect $IMAGE > /dev/null 2>&1; then
+              echo "✅ $IMAGE já existe no servidor"
+            else
+              echo "⬇️ Pull $IMAGE"
+              for i in 1 2 3; do
+                docker pull $IMAGE && break
+                echo "⚠️ Pull falhou, tentativa $i/3..."
+                sleep 5
+              done
+            fi
           done
 
-          # Garante as imagens via docker pull direto
-          for img in ed-backend-api ed-worker ed-geocoder ed-watchdog ed-frontend-app ed-admin ed-calibrador; do
-            for i in 1 2 3; do
-              docker pull docker.easydoor.ai/easydoor/${img}:latest && break
-              echo "⚠️ docker pull ${img} falhou, tentativa $i/3..."
-              sleep 5
-            done
-          done
-          
           docker compose up -d --no-build --remove-orphans
-          make rebuild up
-          make worker-rebuild worker-up
-          
-          docker compose up -d --no-build --remove-orphans
-          make rebuild up
-          make worker-rebuild worker-up
-          
-          docker compose up -d --no-build --remove-orphans
+
           make rebuild up
           make worker-rebuild worker-up
 
-      # 9. Aplicar migrations do banco (no servidor)
+      # 9️⃣ Aplicar migrations
       - name: Aplicar migrations do banco
+        if: ${{ !env.ACT }}
         run: |
           cd /opt/easydoor-stack-stage/ed-engine
           source /opt/easydoor-stack-stage/ed-infra/.env
-          PGPASSWORD="${POSTGRES_PASSWORD}" psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB} \
-            -c "DROP FUNCTION IF EXISTS buscar_comparaveis(numeric, numeric, integer, text);"
+
+          PGPASSWORD="${POSTGRES_PASSWORD}" \
+          psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB} \
+            -c "DROP FUNCTION IF EXISTS buscar_comparaveis(numeric, numeric, integer, text);" || true
+
           PGPASSWORD="${POSTGRES_PASSWORD}" \
           PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
           ./migrate.sh migrate
 
-      # 10. Cleanup Docker
-      - name: Cleanup Docker automático
+      # 🔟 Cleanup seguro
+      - name: Cleanup Docker
         if: always()
         run: |
           docker builder prune -f || true
