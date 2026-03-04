@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  repository_dispatch:
+    types: [service-updated]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, ubuntu-latest]
+
+    steps:
+      - name: Deploy no servidor
+        run: |
+          cd /opt/easydoor-stack-stage/ed-infra
+          git pull
+
+          echo "⬇️ Atualizando imagens"
+          for i in 1 2 3; do
+            docker compose pull && break
+            echo "⚠️ Pull falhou, tentativa $i/3..."
+            sleep 5
+          done
+
+          echo "🚀 Subindo stack"
+          docker compose up -d --no-build --remove-orphans
+
+          echo "♻️ Rebuild aplicação"
+          make rebuild
+          make up
+          make worker-rebuild
+          make worker-up
+
+      - name: Aplicar migrations do banco
+        run: |
+          cd /opt/easydoor-stack-stage/ed-engine
+          source /opt/easydoor-stack-stage/ed-infra/.env
+
+          PGPASSWORD="${POSTGRES_PASSWORD}" \
+          PSQL_CMD="psql -h localhost -p 5434 -U ${POSTGRES_USER} -d ${POSTGRES_DB}" \
+          ./migrate.sh migrate

@@ -1,8 +1,6 @@
-name: Build e Push para Registry
+name: Build e Push para Registry (fallback emergência)
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
   repository_dispatch:
     types: [service-updated]

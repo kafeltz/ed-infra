@@ -81,7 +81,6 @@ services:
     image: docker.easydoor.ai/easydoor/ed-backend-api:${APP_VERSION:-latest}
     build:
       context: ../ed-backend-api
-      dockerfile: ../ed-infra/backend/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-backend-api:latest
       args:
@@ -114,7 +113,7 @@ services:
     image: docker.easydoor.ai/easydoor/ed-worker:${APP_VERSION:-latest}
     build:
       context: ../
-      dockerfile: ed-infra/worker/Dockerfile
+      dockerfile: ed-worker/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-worker:latest
     container_name: easydoor-worker
@@ -137,8 +136,7 @@ services:
   ed-geocoder:
     image: docker.easydoor.ai/easydoor/ed-geocoder:${APP_VERSION:-latest}
     build:
-      context: ../
-      dockerfile: ed-infra/geocoder/Dockerfile
+      context: ../ed-geocoder
       cache_from:
         - docker.easydoor.ai/easydoor/ed-geocoder:latest
     container_name: easydoor-geocoder
@@ -154,8 +152,7 @@ services:
   ed-watchdog:
     image: docker.easydoor.ai/easydoor/ed-watchdog:${APP_VERSION:-latest}
     build:
-      context: ../
-      dockerfile: ed-infra/watchdog/Dockerfile
+      context: ../ed-watchdog
       cache_from:
         - docker.easydoor.ai/easydoor/ed-watchdog:latest
     container_name: easydoor-watchdog
@@ -188,7 +185,6 @@ services:
     image: docker.easydoor.ai/easydoor/ed-frontend-app:${APP_VERSION:-latest}
     build:
       context: ../ed-frontend-app
-      dockerfile: ../ed-infra/frontend/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-frontend-app:latest
       args:
@@ -205,7 +201,6 @@ services:
     image: docker.easydoor.ai/easydoor/ed-admin:${APP_VERSION:-latest}
     build:
       context: ../ed-admin
-      dockerfile: ../ed-infra/frontend/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-admin:latest
       args:
@@ -219,7 +214,6 @@ services:
     image: docker.easydoor.ai/easydoor/ed-calibrador:${APP_VERSION:-latest}
     build:
       context: ../ed-calibrador
-      dockerfile: ../ed-infra/frontend/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-calibrador:latest
       args:
