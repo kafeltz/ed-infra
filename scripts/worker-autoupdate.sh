@@ -17,27 +17,25 @@ cd "$INFRA_DIR"
 ARCH="$(uname -m)"
 
 if [[ "$ARCH" == "aarch64" ]]; then
-    # ── ARM64: sem imagem no registry — compara hash do ed-infra ──────────────
+    # ── ARM64: sem imagem no registry — compara hash do ed-infra antes/depois do pull ──
     LOG "ARM64: verificando via git..."
+
+    BEFORE=$(git rev-parse --short HEAD)
     git pull origin master --quiet
+    AFTER=$(git rev-parse --short HEAD)
 
-    CURRENT_HASH=$(git rev-parse --short HEAD)
-    RUNNING_VERSION=$(docker inspect easydoor-worker \
-        --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
-        | grep '^WORKER_VERSION=' | cut -d= -f2 || echo "")
-
-    if [[ -z "$RUNNING_VERSION" ]]; then
+    if ! docker inspect easydoor-worker > /dev/null 2>&1; then
         LOG "Worker não está rodando. Iniciando..."
         make worker-up
         exit 0
     fi
 
-    if [[ "$CURRENT_HASH" == "$RUNNING_VERSION" ]]; then
-        LOG "Worker já está na versão mais recente ($CURRENT_HASH). Nada a fazer."
+    if [[ "$BEFORE" == "$AFTER" ]]; then
+        LOG "Nenhuma atualização ($AFTER). Nada a fazer."
         exit 0
     fi
 
-    LOG "Nova versão detectada ($RUNNING_VERSION → $CURRENT_HASH). Rebuilding..."
+    LOG "Nova versão detectada ($BEFORE → $AFTER). Rebuilding..."
     make worker-up
     LOG "Worker atualizado com sucesso."
 

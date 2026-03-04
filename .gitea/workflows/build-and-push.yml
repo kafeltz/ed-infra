@@ -48,12 +48,10 @@ jobs:
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
       # 5️⃣ Build apenas se tag não existir
-      # IMPORTANTE: todos os serviços usam o hash do ed-infra (APP_VERSION) como
-      # versão — não o hash do próprio repo. O servidor (ed-backend-api) grava
-      # SERVER_VERSION=$APP_VERSION e rejeita workers com WORKER_VERSION diferente.
-      # Usar hashes distintos por repo quebra essa invariante e causa o erro:
-      # "[WARN] Worker desatualizado. Versão local: X, Servidor: Y"
-      # Ver issue #23.
+      # O servidor expõe GET /api/version com SERVER_VERSION=$APP_VERSION.
+      # O worker consulta esse endpoint a cada poll e para se a versão mudar,
+      # aguardando o autoupdate reiniciá-lo com a imagem nova.
+      # Ver issue #24.
       - name: Build das imagens
         working-directory: ed-infra
         run: |

@@ -81,14 +81,14 @@ Variáveis: `API_URL`, `WORKER_API_KEY`, `WORKER_MAX_TOTAL`, `WORKER_HEADLESS`.
 
 ## Sincronização de versão servidor/worker
 
-O build injeta automaticamente a versão do código nas imagens Docker via build args.
+O servidor expõe `GET /api/version` com a versão da imagem. Workers consultam a cada poll e param se a versão mudar.
 
 ### Como funciona
 
 - `APP_VERSION` é calculada automaticamente no `Makefile` como o hash curto do git (`git rev-parse --short HEAD`)
-- Ao buildar, o Dockerfile do backend recebe `SERVER_VERSION=$APP_VERSION` e o do worker recebe `WORKER_VERSION=$APP_VERSION`
-- O backend rejeita com `409 Conflict` qualquer worker com `WORKER_VERSION` diferente de `SERVER_VERSION`
-- Workers parados com versão antiga ficam aguardando atualização manual
+- Ao buildar, o Dockerfile do backend recebe `SERVER_VERSION=$APP_VERSION` (o worker **não** recebe versão)
+- O servidor expõe `GET /api/version` → `{"version": "<hash>"}`
+- A cada poll, o worker compara a versão do servidor com a do poll anterior; se mudou, para e aguarda autoupdate
 
 ### Fluxo de deploy
 
@@ -110,8 +110,9 @@ Ver `docs/deploy.md` para o fluxo completo.
 
 ### Importante
 
-- **Nunca defina `SERVER_VERSION` ou `WORKER_VERSION` no `.env`** — a versão vem do build, não do ambiente
-- Se o worker subir com `APP_VERSION=dev` (sem git), a validação do servidor aceitará `dev` como versão — útil para desenvolvimento local
+- **Nunca defina `SERVER_VERSION` no `.env`** — a versão vem do build, não do ambiente
+- `WORKER_VERSION` não existe mais — o worker detecta atualizações via `GET /api/version`
+- Se o servidor subir com `SERVER_VERSION=""` (dev local), o worker nunca detecta mudança — útil para desenvolvimento
 
 ## Schema do banco
 

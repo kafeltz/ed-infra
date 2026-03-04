@@ -117,8 +117,6 @@ services:
       dockerfile: ed-infra/worker/Dockerfile
       cache_from:
         - docker.easydoor.ai/easydoor/ed-worker:latest
-      args:
-        WORKER_VERSION: ${APP_VERSION:-dev}
     container_name: easydoor-worker
     restart: unless-stopped
     shm_size: 2gb
