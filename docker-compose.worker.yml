@@ -11,6 +11,7 @@
 services:
   ed-worker:
     image: docker.easydoor.ai/easydoor/ed-worker:latest
+    platform: linux/amd64
     container_name: easydoor-worker
     restart: unless-stopped
     shm_size: 2gb

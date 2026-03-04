@@ -122,17 +122,8 @@ restart-%:
 WORKER_COMPOSE := docker compose -f docker-compose.worker.yml
 
 worker-up:
-	@if [ "$$(uname -m)" = "aarch64" ]; then \
-		echo "ARM64 detectado — buildando imagem localmente..."; \
-		cp -f .dockerignore ../; \
-		docker compose build ed-worker; \
-		docker tag docker.easydoor.ai/easydoor/ed-worker:$(APP_VERSION) docker.easydoor.ai/easydoor/ed-worker:latest; \
-		$(WORKER_COMPOSE) up -d --pull never; \
-	else \
-		echo "AMD64 detectado — puxando imagem do registry..."; \
-		$(WORKER_COMPOSE) pull; \
-		$(WORKER_COMPOSE) up -d; \
-	fi
+	$(WORKER_COMPOSE) pull
+	$(WORKER_COMPOSE) up -d
 	@echo "Worker iniciado. Acompanhe com: make worker-logs"
 
 worker-down:
