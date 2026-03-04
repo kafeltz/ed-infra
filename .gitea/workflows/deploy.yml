@@ -25,12 +25,6 @@ jobs:
           echo "🚀 Subindo stack"
           docker compose up -d --no-build --remove-orphans
 
-          echo "♻️ Rebuild aplicação"
-          make rebuild
-          make up
-          make worker-rebuild
-          make worker-up
-
       - name: Aplicar migrations do banco
         run: |
           cd /opt/easydoor-stack-stage/ed-engine
