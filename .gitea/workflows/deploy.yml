@@ -28,6 +28,8 @@ jobs:
       - name: Aplicar migrations do banco
         run: |
           cd /opt/easydoor-stack-stage/ed-engine
+          git pull
+
           source /opt/easydoor-stack-stage/ed-infra/.env
 
           PGPASSWORD="${POSTGRES_PASSWORD}" \
