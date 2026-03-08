@@ -18,6 +18,7 @@ help:
 	@echo "    dev-up             Sobe banco (5433) + Keycloak (10082) para dev local"
 	@echo "    dev-down           Para o banco de dev"
 	@echo "    dev-psql           Abre shell psql no banco de dev"
+	@echo "    dev-sync           Copia dados de produção para o banco dev local"
 	@echo ""
 	@echo "  Infra local"
 	@echo "    up                 Sobe todos os containers e garante os bancos criados"
@@ -75,7 +76,7 @@ dev-up:
 	@echo "  Admin console: http://localhost:10082/admin  (admin / EasyDoor@2024)"
 	@echo ""
 	@echo "Agora rode em terminais separados:"
-	@echo "  cd ../ed-engine && PSQL_CMD='psql -h localhost -p 5433 -U easydoor -d easydoor' make migrate"
+	@echo "  cd ../ed-backend-api && PSQL_CMD='psql -h localhost -p 5433 -U easydoor -d easydoor' make migrate"
 	@echo "  cd ../ed-backend-api && DATABASE_URL=postgresql://easydoor:easydoor@localhost:5433/easydoor make dev"
 	@echo "  cd ../ed-frontend-app && npm run dev"
 
@@ -84,6 +85,9 @@ dev-down:
 
 dev-psql:
 	PGPASSWORD=easydoor psql -h localhost -p 5433 -U easydoor -d easydoor
+
+dev-sync: ## Copia dados de produção para o banco dev local
+	./scripts/sync-prod-to-dev.sh
 
 # ─── Infra local ──────────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Visão geral
 
-Repositório de infraestrutura Docker da EasyDoor. Orquestra os serviços base (banco de dados, frontends, worker) via `docker compose`. O schema do banco **não** é gerenciado aqui — fica no repositório `ed-engine`.
+Repositório de infraestrutura Docker da EasyDoor. Orquestra os serviços base (banco de dados, frontends, worker) via `docker compose`. O schema do banco **não** é gerenciado aqui — fica no repositório `ed-backend-api`.
 
 ## Comandos principais
 
@@ -61,6 +61,28 @@ Configurações customizadas são montadas como bind mounts read-only:
 
 O serviço `log_separator` executa `postgres/separate_logs_realtime.py` em tempo real, lendo `/var/log/postgresql/postgresql.log` e separando entradas pgaudit em `audit_logs/audit.log` e logs normais em `audit_logs/postgres.log`.
 
+## Ambientes locais (dev vs PRD simulado)
+
+Na máquina de desenvolvimento existem **dois ambientes Docker** que coexistem sem conflito:
+
+| Ambiente | Comando | Compose file | Postgres | Keycloak | Apps |
+|----------|---------|-------------|----------|----------|------|
+| **Dev** | `make dev-up` | `docker-compose.dev.yml` | porta **5433** | porta 10082 | Só DB + Keycloak. Cada app sobe manual na sua pasta (`make dev`) |
+| **PRD simulado** | `make up` | `docker-compose.yml` | porta **5434** | porta 8082 | Stack completa (backend, frontend, worker, nginx, etc.) |
+
+**Containers:**
+- Dev: `easydoor-db-dev`, `easydoor-keycloak-dev`
+- PRD simulado: `easydoor-db`, `easydoor-backend-api`, `easydoor-frontend`, etc.
+
+**Quando usar cada um:**
+- **Dev** — desenvolvimento ativo, com hot reload nos apps (cada app roda com `make dev` na sua pasta)
+- **PRD simulado** — testar o sistema completo como seria em produção, com todas as imagens Docker buildadas
+
+**Atenção com portas ao rodar queries SQL:**
+- `localhost:5433` → banco **dev**
+- `localhost:5434` → banco **PRD simulado**
+- `localhost:15432` → banco **PRD real** (via SSH tunnel, ver CLAUDE.md raiz do projeto)
+
 ## Variáveis de ambiente
 
 Copiar `.env.example` para `.env` antes de subir:
@@ -116,8 +138,8 @@ Ver `docs/deploy.md` para o fluxo completo.
 
 ## Schema do banco
 
-O container PostgreSQL sobe **sem tabelas**. O schema é gerenciado pelo `ed-engine`:
+O container PostgreSQL sobe **sem tabelas**. O schema é gerenciado pelo `ed-backend-api`:
 
 ```bash
-cd ~/ed-engine && make schema   # idempotente — pode rodar a qualquer momento
+cd ~/ed-backend-api && PSQL_CMD='psql -h localhost -p 5434 -U easydoor -d easydoor' make migrate
 ```
