@@ -162,8 +162,7 @@ Sem essas três configurações o Firefox trava ou não abre.
 ```
 easydoor/
 ├── ed-infra/        ← este repo
-├── ed-engine/       ← schema e lógica SQL
-├── ed-backend-api/  ← API backend
+├── ed-backend-api/  ← API backend + schema (migrations)
 ├── ed-geocoder/     ← scheduler de geocodificação
 ├── ed-worker/       ← worker de scraping
 ├── ed-raspadinha/   ← lib de scraping (usada pelo worker)
@@ -191,7 +190,7 @@ Isso cria os diretórios de dados, sobe todos os containers e garante que o banc
 
 ### 3. Aplicar o schema do banco
 
-O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-engine` via migrations:
+O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-backend-api` via migrations:
 
 ```bash
 cd ../ed-backend-api
@@ -281,8 +280,8 @@ psql -h localhost -p 5432 -U easydoor -d easydoor -c "SELECT COUNT(*) FROM anunc
 # 5. Parar PG 16 nativo
 sudo systemctl stop postgresql && sudo systemctl disable postgresql
 
-# 6. Reaplicar functions do ed-engine
-cd ~/ed-engine && make schema
+# 6. Reaplicar migrations
+cd ~/ed-backend-api && make migrate
 ```
 
 ## Verificação
@@ -294,7 +293,6 @@ curl -s http://localhost:4175 | head -5
 curl -s http://localhost:4176 | head -5
 curl -s http://localhost:4174 | head -5
 curl -s http://localhost:8000/health     # API backend
-cd ~/ed-engine && make test-quick
 ```
 
 ## Estrutura

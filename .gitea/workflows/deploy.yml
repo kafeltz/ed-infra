@@ -27,7 +27,7 @@ jobs:
 
       - name: Aplicar migrations do banco
         run: |
-          cd /opt/easydoor-stack-stage/ed-engine
+          cd /opt/easydoor-stack-stage/ed-backend-api
           git pull
 
           source /opt/easydoor-stack-stage/ed-infra/.env

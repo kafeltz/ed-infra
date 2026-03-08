@@ -132,7 +132,7 @@ make db-keycloak
 make rebuild
 
 # 3. Aplicar schema do banco easydoor
-cd ../ed-engine && make schema
+cd ../ed-backend-api && make migrate
 ```
 
 ### Dev local (sem Docker para frontend/backend)
