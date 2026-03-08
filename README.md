@@ -194,9 +194,8 @@ Isso cria os diretórios de dados, sobe todos os containers e garante que o banc
 O banco sobe vazio. O schema (tabelas, indexes, triggers, functions) é gerenciado pelo `ed-engine` via migrations:
 
 ```bash
-cd ../ed-engine
+cd ../ed-backend-api
 make migrate  # aplica todas as migrations pendentes
-make seed     # popula dados iniciais (mat_ajustes + anúncios)
 ```
 
 `make migrate` é idempotente — pode ser reexecutado a qualquer momento sem perder dados.
@@ -246,7 +245,7 @@ Se precisar apagar tudo e reinicializar (ex: banco corrompido, testar migração
 ```bash
 make nuke     # destrói tudo (pede confirmação digitando DESTRUIR)
 make up       # recria infra limpa
-cd ../ed-engine && make migrate && make seed
+cd ../ed-backend-api && make migrate
 ```
 
 ## Geocoder (ed-geocoder)
