@@ -114,13 +114,21 @@ mkdir -p "$DUMP_DIR"
 
 for table in "${TABLES[@]}"; do
     log "Exportando ${table} de produção..."
-    psql_prod -c "\\COPY ${table} TO '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
+
+    # Usa as colunas do schema dev como referência — evita desalinhamento
+    # quando prod tem colunas extras (migrations mais recentes).
+    cols=$(psql_dev -tA -c \
+        "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) \
+         FROM information_schema.columns \
+         WHERE table_schema='public' AND table_name='${table}'")
+
+    psql_prod -c "\\COPY (SELECT ${cols} FROM ${table}) TO '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
     rows=$(wc -l < "${DUMP_DIR}/${table}.csv")
     rows=$((rows - 1))  # descontar header
 
     log "Importando ${table} no dev (${rows} registros)..."
     psql_dev -c "TRUNCATE ${table} CASCADE"
-    psql_dev -c "\\COPY ${table} FROM '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
+    psql_dev -c "\\COPY ${table} (${cols}) FROM '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
 done
 
 # ─── Refresh MV ──────────────────────────────────────────────────────────────
