@@ -55,4 +55,3 @@ jobs:
         run: |
           docker builder prune -f || true
           docker image prune -f || true
-          docker container prune -f || true
