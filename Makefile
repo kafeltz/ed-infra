@@ -69,7 +69,7 @@ dev-up:
 		-c "CREATE DATABASE keycloak OWNER easydoor;"
 	$(DEV_COMPOSE) up -d keycloak
 	@echo "Aguardando Keycloak ficar pronto..."
-	@until curl -sf http://localhost:10082/health/ready >/dev/null 2>&1; do sleep 2; done
+	@until [ "$$(docker inspect --format='{{.State.Health.Status}}' easydoor-keycloak-dev 2>/dev/null)" = "healthy" ]; do sleep 2; done
 	@echo ""
 	@echo "Banco dev pronto em localhost:5433"
 	@echo "Keycloak dev pronto em http://localhost:10082"
