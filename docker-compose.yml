@@ -173,7 +173,6 @@ services:
     container_name: easydoor-nginx
     restart: unless-stopped
     ports:
-      - "4174:4174"
       - "4175:4175"
       - "4176:4176"
     volumes:
@@ -181,7 +180,6 @@ services:
     depends_on:
       - ed-frontend-app
       - ed-admin
-      - ed-calibrador
       - ed-backend-api
 
   ed-frontend-app:
@@ -215,20 +213,3 @@ services:
     restart: unless-stopped
     environment:
       PORT: "4176"
-
-  ed-calibrador:
-    image: docker.easydoor.ai/easydoor/ed-calibrador:${APP_VERSION:-latest}
-    build:
-      context: ../ed-calibrador
-      cache_from:
-        - docker.easydoor.ai/easydoor/ed-calibrador:latest
-      args:
-        PORT: "4174"
-        VITE_API_URL: ${VITE_API_URL}
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL}
-        VITE_KEYCLOAK_REALM: easydoor-internal
-        VITE_KEYCLOAK_CLIENT_ID: ed-calibrador
-    container_name: easydoor-ed-calibrador
-    restart: unless-stopped
-    environment:
-      PORT: "4174"

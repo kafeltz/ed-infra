@@ -7,7 +7,7 @@ export APP_VERSION
 
 REGISTRY := docker.easydoor.ai/easydoor
 SERVICES_VERSIONED := ed-backend-api ed-worker ed-geocoder ed-watchdog \
-                      ed-frontend-app ed-admin ed-calibrador
+                      ed-frontend-app ed-admin
 SERVICES_STABLE := ed-postgres ed-keycloak
 
 help:
