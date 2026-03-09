@@ -219,6 +219,7 @@ services:
       args:
         PORT: "4174"
         VITE_API_URL: ${VITE_API_URL}
+        VITE_API_TOKEN: ${API_TOKEN}
     container_name: easydoor-ed-calibrador
     restart: unless-stopped
     environment:
