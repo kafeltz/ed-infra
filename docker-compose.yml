@@ -60,9 +60,9 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
-      KC_HOSTNAME: ${KC_HOSTNAME:-localhost}
+      KC_HOSTNAME: ${KC_HOSTNAME}
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-EasyDoor@2024}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_LOG_LEVEL: INFO
     volumes:
       - ./keycloak/data/import:/opt/keycloak/data/import:ro
@@ -84,20 +84,20 @@ services:
       cache_from:
         - docker.easydoor.ai/easydoor/ed-backend-api:latest
       args:
-        SERVER_VERSION: ${APP_VERSION:-dev}
+        SERVER_VERSION: ${APP_VERSION}
     container_name: easydoor-backend-api
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174,http://localhost:5175}
+      CORS_ORIGINS: ${CORS_ORIGINS}
       KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
+      KEYCLOAK_ISSUER_URL: ${VITE_KEYCLOAK_URL}
       KEYCLOAK_REALM: easydoor
       KEYCLOAK_CLIENT_ID: easydoor-frontend
       KEYCLOAK_INTERNAL_REALM: easydoor-internal
-      KEYCLOAK_INTERNAL_ISSUER_URL: ${VITE_KEYCLOAK_INTERNAL_URL:-http://localhost:8090}
+      KEYCLOAK_INTERNAL_ISSUER_URL: ${VITE_KEYCLOAK_INTERNAL_URL}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 10s
@@ -129,7 +129,7 @@ services:
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: easydoor-internal
       KEYCLOAK_CLIENT_ID: ed-worker
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_WORKER_CLIENT_SECRET:-ed-worker-secret-changeme}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_WORKER_CLIENT_SECRET}
       WORKER_MAX_TOTAL: "3"
       WORKER_HEADLESS: "1"
     depends_on:
@@ -192,9 +192,9 @@ services:
         - docker.easydoor.ai/easydoor/ed-frontend-app:latest
       args:
         PORT: "4175"
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8090}
-        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-easydoor}
-        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-easydoor-frontend}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID}
     container_name: easydoor-frontend
     restart: unless-stopped
     environment:
@@ -208,7 +208,7 @@ services:
         - docker.easydoor.ai/easydoor/ed-admin:latest
       args:
         PORT: "4176"
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL:-http://localhost:8090}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL}
         VITE_KEYCLOAK_REALM: easydoor-internal
         VITE_KEYCLOAK_CLIENT_ID: ed-admin
     container_name: easydoor-ed-admin
@@ -225,7 +225,7 @@ services:
       args:
         PORT: "4174"
         VITE_API_URL: ${VITE_API_URL}
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL:-http://localhost:8090}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL}
         VITE_KEYCLOAK_REALM: easydoor-internal
         VITE_KEYCLOAK_CLIENT_ID: ed-calibrador
     container_name: easydoor-ed-calibrador
