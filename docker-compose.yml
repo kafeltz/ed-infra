@@ -218,6 +218,7 @@ services:
         - docker.easydoor.ai/easydoor/ed-calibrador:latest
       args:
         PORT: "4174"
+        VITE_API_URL: ${VITE_API_URL}
     container_name: easydoor-ed-calibrador
     restart: unless-stopped
     environment:
