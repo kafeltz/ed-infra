@@ -1,0 +1,133 @@
+{
+  "realm": "easydoor-internal",
+  "enabled": true,
+  "displayName": "EasyDoor Internal",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Administrador interno" },
+      { "name": "calibrador", "description": "Acesso ao calibrador" },
+      { "name": "worker", "description": "Service account dos workers" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "ed-admin",
+      "name": "EasyDoor Admin",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "http://localhost:5175/*",
+        "http://localhost:4176/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5175",
+        "http://localhost:4176"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5175/*##http://localhost:4176/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ]
+    },
+    {
+      "clientId": "ed-calibrador",
+      "name": "EasyDoor Calibrador",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "rootUrl": "",
+      "baseUrl": "",
+      "redirectUris": [
+        "http://localhost:5174/*",
+        "http://localhost:4174/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5174",
+        "http://localhost:4174"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5174/*##http://localhost:4174/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ]
+    },
+    {
+      "clientId": "ed-worker",
+      "name": "EasyDoor Worker",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "ed-worker-secret-changeme",
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {}
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@easydoor.ai",
+      "firstName": "Admin",
+      "lastName": "EasyDoor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "EasyDoor@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "calibrador"]
+    },
+    {
+      "username": "ismael",
+      "email": "ismael@easydoor.ai",
+      "firstName": "Ismael",
+      "lastName": "Santos",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "EasyDoor@2024",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "calibrador"]
+    }
+  ]
+}
