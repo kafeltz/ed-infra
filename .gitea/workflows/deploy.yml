@@ -30,7 +30,7 @@ jobs:
           done
 
           echo "🚀 Subindo stack"
-          docker compose up -d --no-build --remove-orphans
+          docker compose up -d --no-build --remove-orphans --force-recreate
 
       - name: Aplicar migrations do banco
         run: |
