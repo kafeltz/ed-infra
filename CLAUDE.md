@@ -143,3 +143,24 @@ O container PostgreSQL sobe **sem tabelas**. O schema é gerenciado pelo `ed-bac
 ```bash
 cd ~/ed-backend-api && PSQL_CMD='psql -h localhost -p 5434 -U easydoor -d easydoor' make migrate
 ```
+
+## Padrão de Variáveis de Ambiente
+
+Sem fallbacks em variáveis de conectividade. Se a variável não estiver definida no `.env`, o docker compose deve falhar — não subir com valor errado.
+
+```yaml
+# CORRETO
+KC_HOSTNAME: ${KC_HOSTNAME}
+KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_WORKER_CLIENT_SECRET}
+VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
+
+# ERRADO
+KC_HOSTNAME: ${KC_HOSTNAME:-localhost}
+KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-EasyDoor@2024}
+KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_WORKER_CLIENT_SECRET:-changeme}
+```
+
+Exceção: `APP_VERSION:-latest` (tag de imagem Docker) e parâmetros de tuning operacional.
+
+Regra completa com todos os exemplos: `CLAUDE.md` raiz do projeto.
