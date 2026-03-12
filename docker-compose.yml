@@ -228,3 +228,11 @@ services:
     environment:
       TZ: America/Sao_Paulo
       PORT: "4176"
+
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: "172.19.0.0/16"
+        - subnet: "fd00:dead:beef::/48"
