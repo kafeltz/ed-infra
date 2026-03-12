@@ -24,3 +24,11 @@ services:
       TZ: America/Sao_Paulo
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+        - subnet: "2a02:c207:2311:8974::/80"
