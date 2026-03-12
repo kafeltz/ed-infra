@@ -153,6 +153,7 @@ services:
     container_name: easydoor-geocoder
     restart: unless-stopped
     environment:
+      JAVA_OPTS_APPEND: "-Duser.timezone=America/Sao_Paulo -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
       TZ: America/Sao_Paulo
       DATABASE_URL: postgresql://easydoor:easydoor@db:5432/easydoor
       GEOCODER_POLL_INTERVAL: "30"
