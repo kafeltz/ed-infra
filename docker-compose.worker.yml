@@ -20,5 +20,7 @@ services:
     cap_add:
       - SYS_ADMIN
     env_file: .env.worker
+    environment:
+      TZ: America/Sao_Paulo
     extra_hosts:
       - "host.docker.internal:host-gateway"
