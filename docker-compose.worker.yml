@@ -24,3 +24,9 @@ services:
       TZ: America/Sao_Paulo
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - ed-infra_default
+
+networks:
+  ed-infra_default:
+    external: true
