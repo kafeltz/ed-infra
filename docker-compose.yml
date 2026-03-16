@@ -134,7 +134,7 @@ services:
     environment:
       TZ: America/Sao_Paulo
       API_URL: http://ed-backend-api:8000
-      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_URL: ${VITE_KEYCLOAK_INTERNAL_URL}
       KEYCLOAK_REALM: easydoor-internal
       KEYCLOAK_CLIENT_ID: ed-worker
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_WORKER_CLIENT_SECRET}
