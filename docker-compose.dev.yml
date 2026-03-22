@@ -7,9 +7,9 @@ services:
   db:
     container_name: easydoor-db-dev
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:10000:5432"
 
   keycloak:
     container_name: easydoor-keycloak-dev
     ports:
-      - "127.0.0.1:10082:8080"
+      - "127.0.0.1:10001:8080"

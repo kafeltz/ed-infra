@@ -15,7 +15,7 @@ help:
 	@echo "Infra EasyDoor"
 	@echo ""
 	@echo "  Desenvolvimento local"
-	@echo "    dev-up             Sobe banco (5433) + Keycloak (10082) para dev local"
+	@echo "    dev-up             Sobe banco (10000) + Keycloak (10082) para dev local"
 	@echo "    dev-down           Para o banco de dev"
 	@echo "    dev-psql           Abre shell psql no banco de dev"
 	@echo "    dev-sync           Copia dados de produção para o banco dev local"
@@ -49,7 +49,7 @@ help:
 	@echo ""
 
 # ─── Desenvolvimento local ────────────────────────────────────────────────────
-# Sobe banco (porta 5433) + Keycloak (porta 10082).
+# Sobe banco (porta 10000) + Keycloak (porta 10082).
 # Coexiste com o ambiente de produção local (porta 5432/5434).
 # Backend e frontend rodam nativamente no Linux (sem Docker).
 
@@ -62,29 +62,29 @@ dev-up:
 	chmod 777 postgres_logs audit_logs data
 	$(DEV_COMPOSE) up -d db
 	@echo "Aguardando PostgreSQL aceitar conexões..."
-	@until PGPASSWORD=easydoor psql -h localhost -p 5433 -U easydoor -d easydoor -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
-	@PGPASSWORD=easydoor psql -h localhost -p 5433 -U easydoor -d postgres -tc \
+	@until PGPASSWORD=easydoor psql -h localhost -p 10000 -U easydoor -d easydoor -c "SELECT 1" >/dev/null 2>&1; do sleep 1; done
+	@PGPASSWORD=easydoor psql -h localhost -p 10000 -U easydoor -d postgres -tc \
 		"SELECT 1 FROM pg_database WHERE datname='keycloak'" | grep -q 1 || \
-		PGPASSWORD=easydoor psql -h localhost -p 5433 -U easydoor -d postgres \
+		PGPASSWORD=easydoor psql -h localhost -p 10000 -U easydoor -d postgres \
 		-c "CREATE DATABASE keycloak OWNER easydoor;"
 	$(DEV_COMPOSE) up -d keycloak
 	@echo "Aguardando Keycloak ficar pronto..."
 	@until [ "$$(docker inspect --format='{{.State.Health.Status}}' easydoor-keycloak-dev 2>/dev/null)" = "healthy" ]; do sleep 2; done
 	@echo ""
-	@echo "Banco dev pronto em localhost:5433"
+	@echo "Banco dev pronto em localhost:10000"
 	@echo "Keycloak dev pronto em http://localhost:10082"
 	@echo "  Admin console: http://localhost:10082/admin  (admin / EasyDoor@2024)"
 	@echo ""
 	@echo "Agora rode em terminais separados:"
-	@echo "  cd ../ed-backend-api && PSQL_CMD='psql -h localhost -p 5433 -U easydoor -d easydoor' make migrate"
-	@echo "  cd ../ed-backend-api && DATABASE_URL=postgresql://easydoor:easydoor@localhost:5433/easydoor make dev"
+	@echo "  cd ../ed-backend-api && PSQL_CMD='psql -h localhost -p 10000 -U easydoor -d easydoor' make migrate"
+	@echo "  cd ../ed-backend-api && DATABASE_URL=postgresql://easydoor:easydoor@localhost:10000/easydoor make dev"
 	@echo "  cd ../ed-frontend-app && npm run dev"
 
 dev-down:
 	$(DEV_COMPOSE) down
 
 dev-psql:
-	PGPASSWORD=easydoor psql -h localhost -p 5433 -U easydoor -d easydoor
+	PGPASSWORD=easydoor psql -h localhost -p 10000 -U easydoor -d easydoor
 
 dev-sync: ## Copia dados de produção para o banco dev local
 	./scripts/sync-prod-to-dev.sh

@@ -1,29 +1,30 @@
 #!/usr/bin/env bash
-# sync-prod-to-dev.sh — Copia dados do banco de produção para o dev local.
+# sync-prod-to-dev.sh — Copia o banco de produção inteiro para o dev local.
 #
 # Uso:
-#   ./scripts/sync-prod-to-dev.sh              # sincroniza todas as tabelas
-#   ./scripts/sync-prod-to-dev.sh anuncios     # sincroniza só uma tabela
+#   ./scripts/sync-prod-to-dev.sh
 #
 # Pré-requisitos:
-#   - SSH configurado para mail.easydoor.ai (ssh config ou chave)
-#   - Banco de dev rodando na porta 5433 (make dev-up)
-#   - psql instalado localmente
+#   - SSH configurado para mail.easydoor.ai
+#   - Banco de dev rodando (make dev-up)
+#   - Docker instalado localmente
 #
 # O que faz:
-#   1. Abre SSH tunnel temporário para o banco de produção
-#   2. Exporta tabelas via \COPY (CSV)
-#   3. Importa no banco dev local (TRUNCATE + COPY)
-#   4. Refresh da materialized view mv_anuncios_venda
-#   5. Fecha o tunnel
+#   1. Avisa que o banco dev será destruído e pede confirmação
+#   2. Roda pg_dump no servidor remoto via SSH pipe
+#   3. Copia o dump para dentro do container dev e restaura com pg_restore
 #
-# Tabelas sincronizadas (na ordem correta para respeitar dependências):
-#   - premissas
-#   - mat_ajustes
-#   - anuncios
-#   - geocodificacao_cache
-#   - enderecos
-#   - ceps_cadastrados
+# Por que pg_dump/pg_restore rodam no servidor remoto / container (não local):
+#   As ferramentas locais (pg_dump, pg_restore, psql) podem ter versão diferente
+#   do PostgreSQL 18 em uso. pg_dump recusa dump cross-version e pg_restore
+#   recusa restore com formato de versão superior. Usar o container dev (mesma
+#   imagem do servidor) resolve isso sem instalar PG 18 localmente.
+#
+# Por que substituir o banco inteiro (em vez de sincronizar tabela por tabela):
+#   A abordagem anterior tinha uma lista hardcoded de tabelas que ficava
+#   desatualizada a cada migration novo. Substituir o banco completo elimina
+#   essa manutenção: o dev fica idêntico à produção, independente de quantas
+#   tabelas existam.
 
 set -euo pipefail
 
@@ -32,125 +33,97 @@ set -euo pipefail
 PROD_SSH_HOST="mail.easydoor.ai"
 PROD_SSH_PORT=36000
 PROD_DB_PORT=5434
-TUNNEL_LOCAL_PORT=15432
 
-DEV_DB_PORT=5433
+DEV_CONTAINER="easydoor-db-dev"
 DB_USER="easydoor"
 DB_PASS="easydoor"
 DB_NAME="easydoor"
 
-PROD_DSN="postgresql://${DB_USER}:${DB_PASS}@localhost:${TUNNEL_LOCAL_PORT}/${DB_NAME}"
-DEV_DSN="postgresql://${DB_USER}:${DB_PASS}@localhost:${DEV_DB_PORT}/${DB_NAME}"
-
-DUMP_DIR="/tmp/easydoor-sync-$$"
-
-# Tabelas a sincronizar (ordem importa para dependências)
-ALL_TABLES=(premissas mat_ajustes anuncios geocodificacao_cache enderecos ceps_cadastrados)
+DUMP_FILE="/tmp/easydoor-sync-$$.dump"
+DUMP_FILE_IN_CONTAINER="/tmp/sync.dump"
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 cleanup() {
-    # Fechar tunnel
-    if [[ -n "${TUNNEL_PID:-}" ]] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
-        kill "$TUNNEL_PID" 2>/dev/null || true
-        echo "[OK] Tunnel SSH fechado"
-    fi
-    # Limpar CSVs
-    rm -rf "$DUMP_DIR" 2>/dev/null || true
+    rm -f "$DUMP_FILE" 2>/dev/null || true
+    docker exec "$DEV_CONTAINER" rm -f "$DUMP_FILE_IN_CONTAINER" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
-psql_prod() { psql "$PROD_DSN" "$@" 2>&1 | grep -v "^Warning:.*No existing cluster"; }
-psql_dev()  { psql "$DEV_DSN"  "$@" 2>&1 | grep -v "^Warning:.*No existing cluster"; }
+dev_psql() {
+    docker exec -e PGPASSWORD="$DB_PASS" "$DEV_CONTAINER" psql -U "$DB_USER" "$@" 2>&1 \
+        | grep -v "^WARNING:.*No existing cluster"
+}
 
-# ─── Validações ──────────────────────────────────────────────────────────────
+# ─── AVISO ───────────────────────────────────────────────────────────────────
 
-# Banco dev rodando?
-if ! psql_dev -c "SELECT 1" >/dev/null 2>&1; then
-    echo "ERRO: Banco dev não está rodando na porta ${DEV_DB_PORT}."
-    echo "      Execute: cd ed-infra && make dev-up"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  ATENÇÃO — OPERAÇÃO DESTRUTIVA                               ║"
+echo "║                                                              ║"
+echo "║  O banco de dev LOCAL será DESTRUÍDO e substituído           ║"
+echo "║  por uma cópia completa da PRODUÇÃO.                         ║"
+echo "║                                                              ║"
+echo "║  Dados locais não commitados serão perdidos.                 ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+read -r -p "Continuar? [s/N] " confirm
+if [[ "${confirm,,}" != "s" ]]; then
+    echo "Cancelado."
+    exit 0
+fi
+
+# ─── Validação ───────────────────────────────────────────────────────────────
+
+if ! docker exec -e PGPASSWORD="$DB_PASS" "$DEV_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+    echo "ERRO: Container ${DEV_CONTAINER} não está rodando."
+    echo "      Execute: make dev-up"
     exit 1
 fi
 
-# Determinar tabelas
-if [[ $# -gt 0 ]]; then
-    TABLES=("$@")
-else
-    TABLES=("${ALL_TABLES[@]}")
-fi
+# ─── Dump da produção via SSH ────────────────────────────────────────────────
+# LC_ALL=C evita warnings de perl/locale causados pelas variáveis LC_* do
+# cliente sendo encaminhadas pelo SSH.
 
-# ─── SSH Tunnel ──────────────────────────────────────────────────────────────
+log "Exportando banco de produção via SSH (pg_dump remoto)..."
+ssh -p "$PROD_SSH_PORT" "$PROD_SSH_HOST" \
+    "LC_ALL=C PGPASSWORD=${DB_PASS} pg_dump -h localhost -p ${PROD_DB_PORT} -U ${DB_USER} -d ${DB_NAME} --no-owner --no-acl -Fc" \
+    > "$DUMP_FILE"
 
-log "Abrindo tunnel SSH para produção..."
+log "Dump concluído ($(du -sh "$DUMP_FILE" | cut -f1))"
 
-# Fechar tunnel antigo na mesma porta, se existir
-if lsof -ti :${TUNNEL_LOCAL_PORT} >/dev/null 2>&1; then
-    kill "$(lsof -ti :${TUNNEL_LOCAL_PORT})" 2>/dev/null || true
-    sleep 1
-fi
+# ─── Restauração no dev ───────────────────────────────────────────────────────
 
-ssh -p "$PROD_SSH_PORT" -L "${TUNNEL_LOCAL_PORT}:localhost:${PROD_DB_PORT}" \
-    -N -f -o ExitOnForwardFailure=yes "$PROD_SSH_HOST"
-TUNNEL_PID=$(lsof -ti :${TUNNEL_LOCAL_PORT} | head -1)
+log "Copiando dump para o container..."
+docker cp "$DUMP_FILE" "${DEV_CONTAINER}:${DUMP_FILE_IN_CONTAINER}"
 
-# Esperar tunnel ficar pronto
-for i in $(seq 1 10); do
-    if psql_prod -c "SELECT 1" >/dev/null 2>&1; then break; fi
-    sleep 1
-done
+log "Destruindo banco dev..."
+# Encerra conexões ativas antes de dropar (ex: psql aberto, backend rodando)
+dev_psql -d postgres -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB_NAME}' AND pid <> pg_backend_pid()" \
+    >/dev/null
+dev_psql -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME}"
+dev_psql -d postgres -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}"
 
-if ! psql_prod -c "SELECT 1" >/dev/null 2>&1; then
-    echo "ERRO: Não foi possível conectar ao banco de produção via tunnel."
-    exit 1
-fi
+log "Restaurando no dev..."
+docker exec -e PGPASSWORD="$DB_PASS" "$DEV_CONTAINER" pg_restore \
+    -U "$DB_USER" -d "$DB_NAME" \
+    --no-owner --no-acl \
+    "$DUMP_FILE_IN_CONTAINER"
 
-log "Tunnel ativo (PID ${TUNNEL_PID})"
-
-# ─── Export / Import ─────────────────────────────────────────────────────────
-
-mkdir -p "$DUMP_DIR"
-
-for table in "${TABLES[@]}"; do
-    log "Exportando ${table} de produção..."
-
-    # Usa as colunas do schema dev como referência — evita desalinhamento
-    # quando prod tem colunas extras (migrations mais recentes).
-    cols=$(psql_dev -tA -c \
-        "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) \
-         FROM information_schema.columns \
-         WHERE table_schema='public' AND table_name='${table}'")
-
-    psql_prod -c "\\COPY (SELECT ${cols} FROM ${table}) TO '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
-    rows=$(wc -l < "${DUMP_DIR}/${table}.csv")
-    rows=$((rows - 1))  # descontar header
-
-    log "Importando ${table} no dev (${rows} registros)..."
-    psql_dev -c "TRUNCATE ${table} CASCADE"
-    psql_dev -c "\\COPY ${table} (${cols}) FROM '${DUMP_DIR}/${table}.csv' WITH CSV HEADER"
-done
-
-# ─── Refresh MV ──────────────────────────────────────────────────────────────
-
-log "Refresh da materialized view..."
-if psql_dev -c "SELECT 1 FROM pg_matviews WHERE matviewname = 'mv_anuncios_venda'" -t | grep -q 1; then
-    psql_dev -c "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_anuncios_venda"
-    mv_count=$(psql_dev -t -c "SELECT count(*) FROM mv_anuncios_venda" | tr -d ' ')
-    log "MV atualizada (${mv_count} registros)"
-else
-    log "MV mv_anuncios_venda não existe (rode as migrations primeiro)"
-fi
-
-# ─── Resumo ──────────────────────────────────────────────────────────────────
+# ─── Resumo ───────────────────────────────────────────────────────────────────
 
 echo ""
 echo "═══════════════════════════════════════════"
 echo " Sync produção → dev concluído"
 echo "═══════════════════════════════════════════"
-for table in "${TABLES[@]}"; do
-    rows=$(wc -l < "${DUMP_DIR}/${table}.csv")
-    rows=$((rows - 1))
-    printf "  %-25s %6d registros\n" "${table}" "${rows}"
-done
+dev_psql -d "$DB_NAME" -t -c "
+    SELECT '  ' || table_name || ': ' || (xpath('/row/cnt/text()',
+        query_to_xml('SELECT count(*) AS cnt FROM ' || quote_ident(table_name), true, true, '')))[1]::text || ' registros'
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    ORDER BY table_name
+"
 echo "═══════════════════════════════════════════"
