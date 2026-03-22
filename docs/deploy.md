@@ -15,7 +15,7 @@ Use quando não há CI configurada, ou para forçar um deploy imediato.
 ### Pré-requisitos
 
 - Todos os repos irmãos presentes em `~/projects/easydoor/`:
-  `ed-backend-api`, `ed-worker`, `ed-raspadinha`, `ed-geocoder`, `ed-watchdog`,
+  `ed-backend-api`, `ed-worker`, `ed-geocoder`, `ed-watchdog`,
   `ed-frontend-app`, `ed-admin`, `ed-calibrador`
 - Docker autenticado no registry (ver abaixo)
 

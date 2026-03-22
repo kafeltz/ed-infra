@@ -140,19 +140,13 @@ worker-logs:
 	$(WORKER_COMPOSE) logs -f ed-worker
 
 worker-test:
-	@if [ -z "$(robo)" ]; then \
+	@if [ -z "$(robo)" ] || [ -z "$(logradouro)" ] || [ -z "$(bairro)" ] || [ -z "$(localidade)" ] || [ -z "$(uf)" ]; then \
 		echo "Uso: make worker-test robo=vivareal logradouro=\"Rua X\" bairro=Centro localidade=Blumenau uf=SC"; \
 		exit 1; \
 	fi
 	docker exec easydoor-worker \
 		env RASPADINHA_HEADLESS=1 \
-		python -m raspadinha \
-		robo=$(robo) \
-		$(if $(logradouro),logradouro="$(logradouro)") \
-		$(if $(bairro),bairro="$(bairro)") \
-		$(if $(localidade),localidade="$(localidade)") \
-		$(if $(uf),uf="$(uf)") \
-		$(if $(cep),cep="$(cep)")
+		python -m raspadinha $(robo) "$(logradouro)" "$(bairro)" "$(localidade)" "$(uf)" "$(cep)"
 
 # ─── Build e Registry ──────────────────────────────────────────────────────
 

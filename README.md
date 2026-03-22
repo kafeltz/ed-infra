@@ -56,13 +56,13 @@ O NGINX interno roteia `/api/` → backend e `/` → Vite preview. Um NGINX exte
 
 O `ed-worker` e o Firefox **não são containers separados** — o Firefox roda como processo filho dentro do próprio container do worker.
 
-Em modo desenvolvimento (fora do Docker), o worker é um processo Python no seu PC e o Firefox abre localmente via `ed-raspadinha/venv/`. Dentro do Docker, é exatamente o mesmo modelo: o worker é um processo Python dentro do container `easydoor-worker`, e o Firefox abre dentro desse mesmo container — instalado na imagem durante o `docker build` via `python -m camoufox fetch`.
+Em modo desenvolvimento (fora do Docker), o worker é um processo Python no seu PC e o Firefox abre localmente via `ed-worker/.venv/`. Dentro do Docker, é exatamente o mesmo modelo: o worker é um processo Python dentro do container `easydoor-worker`, e o Firefox abre dentro desse mesmo container — instalado na imagem durante o `docker build` via `python -m camoufox fetch`.
 
 | | Desenvolvimento | Docker |
 |---|---|---|
-| Firefox instalado em | `ed-raspadinha/venv/` (via `make install`) | imagem `easydoor-worker` (via `docker build`) |
+| Firefox instalado em | `ed-worker/.venv/` (via `make install`) | imagem `easydoor-worker` (via `docker build`) |
 | Quem instalou | `python -m camoufox fetch` no venv local | `python -m camoufox fetch` no Dockerfile |
-| Código do robô | `ed-raspadinha/` no host | copiado para dentro da imagem no build |
+| Código do robô | `ed-worker/raspadinha/` no host | copiado para dentro da imagem no build |
 
 ## Deploy do worker em máquinas remotas
 
@@ -70,13 +70,12 @@ Para rodar o worker em outras máquinas sem subir toda a infra, use o `docker-co
 
 ### Pré-requisitos
 
-O build precisa de três repositórios na mesma pasta pai:
+O build precisa de dois repositórios na mesma pasta pai:
 
 ```bash
 mkdir ~/projects/easydoor && cd ~/projects/easydoor
 git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
 git clone git@git.easydoor.ai:EasyDoor/ed-worker.git
-git clone git@git.easydoor.ai:EasyDoor/ed-raspadinha.git
 ```
 
 ### Configurar e subir
@@ -164,8 +163,7 @@ easydoor/
 ├── ed-infra/        ← este repo
 ├── ed-backend-api/  ← API backend + schema (migrations)
 ├── ed-geocoder/     ← scheduler de geocodificação
-├── ed-worker/       ← worker de scraping
-├── ed-raspadinha/   ← lib de scraping (usada pelo worker)
+├── ed-worker/       ← worker de scraping (inclui módulo raspadinha/)
 ├── ed-frontend-app/ ← frontend principal
 ├── ed-admin/        ← painel admin
 └── ed-calibrador/   ← ferramenta de calibração
@@ -313,7 +311,7 @@ ed-infra/
 ├── backend/
 │   └── Dockerfile                  # FastAPI (ed-backend-api)
 ├── worker/
-│   └── Dockerfile                  # Worker + Firefox (ed-worker + ed-raspadinha)
+│   └── Dockerfile                  # Worker + Firefox (ed-worker com raspadinha/ embutido)
 ├── geocoder/
 │   └── Dockerfile                  # Geocoder (ed-geocoder)
 ├── frontend/

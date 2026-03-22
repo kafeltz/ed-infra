@@ -29,27 +29,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ── Camada 1: dependências Python (muda raramente) ──────────────
-# Copiar apenas os metadados de dependências, não o código-fonte.
-# Assim o pip install + camoufox fetch ficam em cache enquanto as
-# dependências não mudarem.
-
-COPY ed-raspadinha/pyproject.toml /ed-raspadinha/pyproject.toml
-COPY ed-raspadinha/raspadinha/__init__.py /ed-raspadinha/raspadinha/__init__.py
-RUN pip install --no-cache-dir /ed-raspadinha/
-
+# Copiar apenas o requirements.txt antes do código-fonte para que
+# o pip install fique em cache enquanto as dependências não mudarem.
 COPY ed-worker/requirements.txt .
-RUN grep -v 'ed-raspadinha' requirements.txt > /tmp/reqs.txt && \
-    pip install --no-cache-dir -r /tmp/reqs.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Camada 2: binário do Firefox (~500 MB, muda quase nunca) ────
 # Fallback --no-mmdb caso o repositório GeoLite2 esteja indisponível (erro 500).
 RUN python -m camoufox fetch || python -m camoufox fetch --no-mmdb
 
 # ── Camada 3: código-fonte (muda frequentemente) ────────────────
-# Invalidar aqui NÃO rebaixa as camadas acima.
-COPY ed-raspadinha/ /ed-raspadinha/
-RUN pip install --no-cache-dir --no-deps /ed-raspadinha/
-
+# raspadinha/ agora está dentro de ed-worker/ — não precisa de repo separado.
 COPY ed-worker/ .
 
 ENV WORKER_HEADLESS=1

@@ -27,7 +27,7 @@ A imagem é puxada do registry privado `docker.easydoor.ai` — **em máquinas A
 | Arquitetura | Estratégia | Repos necessários |
 |---|---|---|
 | AMD64 (x86_64) | Puxa `:latest` do registry | só `ed-infra` |
-| ARM64 (aarch64) | Builda localmente | `ed-infra` + `ed-worker` + `ed-raspadinha` |
+| ARM64 (aarch64) | Builda localmente | `ed-infra` + `ed-worker` |
 
 ## Pré-requisitos
 
@@ -48,7 +48,6 @@ git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
 mkdir -p ~/easydoor && cd ~/easydoor
 git clone git@git.easydoor.ai:EasyDoor/ed-infra.git
 git clone git@git.easydoor.ai:EasyDoor/ed-worker.git
-git clone git@git.easydoor.ai:EasyDoor/ed-raspadinha.git
 ```
 
 ### 2. Autenticar no registry (uma vez)
